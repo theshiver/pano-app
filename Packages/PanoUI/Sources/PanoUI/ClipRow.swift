@@ -7,6 +7,7 @@ import SwiftUI
 struct ClipRow: View {
     let item: ClipListItem
     let isSelected: Bool
+    var quickRank: Int? = nil
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -27,6 +28,21 @@ struct ClipRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
+            if item.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Theme.accent)
+                    .accessibilityLabel("pinned")
+            }
+            if let quickRank {
+                Text("⌘\(quickRank)")
+                    .font(Theme.rowMeta)
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(Theme.accent.opacity(0.12)))
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 8)

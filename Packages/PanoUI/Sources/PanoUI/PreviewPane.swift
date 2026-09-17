@@ -49,7 +49,7 @@ struct PreviewPane: View {
 
     private var footer: some View {
         HStack {
-            Text("⏎ paste · esc close")
+            Text("⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete")
                 .font(Theme.chipFont)
                 .foregroundStyle(Theme.secondary(scheme))
             Spacer()

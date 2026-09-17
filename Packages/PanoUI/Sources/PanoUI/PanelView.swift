@@ -36,6 +36,9 @@ public struct PanelView: View {
         .frame(width: Theme.windowWidth, height: Theme.windowHeight)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .onModifierKeysChanged(mask: .command) { _, new in
+            model.commandHeld = new.contains(.command)
+        }
         .onAppear {
             model.activate()
             searchFocused = true
@@ -65,11 +68,25 @@ public struct PanelView: View {
                 .onKeyPress(.upArrow) {
                     model.moveSelection(by: -1); return .handled
                 }
-                .onKeyPress(.return) {
-                    model.pasteSelected(); return .handled
-                }
                 .onKeyPress(.escape) {
-                    model.close(); return .handled
+                    model.close()
+                    return .handled
+                }
+                .onKeyPress(keys: [.return]) { press in
+                    model.pasteSelected(plainText: press.modifiers.contains(.shift))
+                    return .handled
+                }
+                .onKeyPress(characters: .decimalDigits, phases: .down) { press in
+                    guard press.modifiers.contains(.command), let n = Int(press.characters), n >= 1, n <= 9 else {
+                        return .ignored
+                    }
+                    model.pasteRank(n)
+                    return .handled
+                }
+                .onKeyPress(characters: CharacterSet(charactersIn: "pP"), phases: .down) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    model.togglePinSelected()
+                    return .handled
                 }
         }
         .padding(.horizontal, 13)
@@ -80,13 +97,17 @@ public struct PanelView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 2) {
-                    ForEach(model.items) { item in
-                        ClipRow(item: item, isSelected: item.id == model.selectedId)
-                            .id(item.id)
-                            .onTapGesture {
-                                model.select(item.id)
-                                model.pasteSelected()
-                            }
+                    ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
+                        ClipRow(
+                            item: item,
+                            isSelected: item.id == model.selectedId,
+                            quickRank: model.commandHeld && index < 9 ? index + 1 : nil
+                        )
+                        .id(item.id)
+                        .onTapGesture {
+                            model.select(item.id)
+                            model.pasteSelected()
+                        }
                     }
                 }
                 .padding(6)

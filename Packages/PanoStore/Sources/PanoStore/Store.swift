@@ -94,7 +94,8 @@ public actor Store {
         try dbQueue.read { db in
             try ClipListItem.fetchAll(
                 db,
-                sql: "SELECT \(ClipListItem.columns) FROM clip ORDER BY clip.last_seen_at DESC LIMIT ?",
+                sql:
+                    "SELECT \(ClipListItem.columns) FROM clip ORDER BY clip.is_pinned DESC, clip.last_seen_at DESC LIMIT ?",
                 arguments: [limit]
             )
         }
@@ -147,6 +148,30 @@ public actor Store {
 
     public func count() throws -> Int {
         try dbQueue.read { db in try Clip.fetchCount(db) }
+    }
+
+    // MARK: Mutations
+
+    public func setPinned(_ isPinned: Bool, id: Int64) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(sql: "UPDATE clip SET is_pinned = ? WHERE id = ?", arguments: [isPinned, id])
+        }
+    }
+
+    /// Deletes one clip and unlinks its blob files. `ON DELETE CASCADE` removes the content rows.
+    public func delete(id: Int64) throws {
+        let blobs = try dbQueue.write { db -> [String] in
+            let paths = try String.fetchAll(
+                db,
+                sql: "SELECT blob_path FROM clip_content WHERE clip_id = ? AND blob_path IS NOT NULL",
+                arguments: [id]
+            )
+            try db.execute(sql: "DELETE FROM clip WHERE id = ?", arguments: [id])
+            return paths
+        }
+        for name in blobs {
+            try? FileManager.default.removeItem(at: blobsURL.appendingPathComponent(name))
+        }
     }
 
     // MARK: Retention

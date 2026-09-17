@@ -32,14 +32,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
 
         let actions = PanelActions(
-            paste: { [weak panel] id in
+            paste: { [weak panel] id, plainText in
                 // Order matters (docs/adr/0003): hide the panel first so the previous app regains
                 // key focus, let it settle, then write the payload and post ⌘V. Doing these in one
                 // Task guarantees the sequence; two separate Tasks raced and ⌘V hit Pano itself.
                 Task { @MainActor in
                     panel?.hide()
                     try? await Task.sleep(for: .milliseconds(60))
-                    let payload = (try? await store.payload(of: id)) ?? []
+                    var payload = (try? await store.payload(of: id)) ?? []
+                    if plainText, let plain = payload.first(where: { $0.uti == "public.utf8-plain-text" }) {
+                        payload = [plain]  // ⇧⏎: paste without formatting
+                    }
                     await PasteService.paste(payload)
                 }
             },

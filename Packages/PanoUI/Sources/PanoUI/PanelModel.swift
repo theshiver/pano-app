@@ -12,6 +12,8 @@ public final class PanelModel {
         didSet { if query != oldValue { reload() } }
     }
     public private(set) var selectedId: Int64?
+    /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
+    public var commandHeld: Bool = false
 
     private let store: Store
     private let actions: PanelActions
@@ -59,9 +61,39 @@ public final class PanelModel {
         selectedId = id
     }
 
-    public func pasteSelected() {
+    public func pasteSelected(plainText: Bool = false) {
         guard let selectedId else { return }
-        actions.paste(selectedId)
+        actions.paste(selectedId, plainText)
+    }
+
+    /// Numbered quick-paste: ⌘1…⌘9 paste the nth visible row (1-based).
+    public func pasteRank(_ rank: Int) {
+        guard items.indices.contains(rank - 1) else { return }
+        actions.paste(items[rank - 1].id, false)
+    }
+
+    public func togglePinSelected() {
+        guard let id = selectedId, let item = items.first(where: { $0.id == id }) else { return }
+        let newValue = !item.isPinned
+        Task {
+            try? await store.setPinned(newValue, id: id)
+            reload()  // keeps selectedId; re-sorts so pinned float to the top
+        }
+    }
+
+    public func deleteSelected() {
+        guard let id = selectedId else { return }
+        // Move selection to the next row (or the previous if this was the last) before it vanishes.
+        let index = items.firstIndex { $0.id == id } ?? 0
+        let nextId =
+            items.indices.contains(index + 1)
+            ? items[index + 1].id
+            : (index > 0 ? items[index - 1].id : nil)
+        selectedId = nextId
+        Task {
+            try? await store.delete(id: id)
+            reload()
+        }
     }
 
     public func close() {

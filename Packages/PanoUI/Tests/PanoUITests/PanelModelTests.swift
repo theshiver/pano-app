@@ -9,7 +9,7 @@ private func makeModel() throws -> (PanelModel, Store, URL) {
     let folder = URL(fileURLWithPath: NSTemporaryDirectory())
         .appendingPathComponent("pano-ui-\(UUID().uuidString)", isDirectory: true)
     let store = try Store(folder: folder)
-    let actions = PanelActions(paste: { _ in }, close: {})
+    let actions = PanelActions(paste: { _, _ in }, close: {})
     return (PanelModel(store: store, actions: actions), store, folder)
 }
 
@@ -72,4 +72,40 @@ private func text(_ s: String) -> ClipCapture {
     #expect(model.items.count == 1)
     #expect(model.items.first?.content == "banana bread")
     #expect(model.selectedId == model.items.first?.id)
+}
+
+@MainActor
+@Test func deleteMovesSelectionToNext() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let now = Date()
+    try await store.insert(text("a"), now: now)
+    try await store.insert(text("b"), now: now.addingTimeInterval(10))
+    try await store.insert(text("c"), now: now.addingTimeInterval(20))
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    // items: c, b, a — selection on c
+    model.deleteSelected()
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.items.map(\.content) == ["b", "a"])
+    #expect(model.selectedId == model.items.first?.id)  // moved to b
+}
+
+@MainActor
+@Test func pinReordersToTop() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let now = Date()
+    let aId = try await store.insert(text("a"), now: now)
+    try await store.insert(text("b"), now: now.addingTimeInterval(10))
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    // items: b, a — select a, pin it
+    model.select(aId)
+    model.togglePinSelected()
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.items.first?.content == "a")
+    #expect(model.items.first?.isPinned == true)
 }

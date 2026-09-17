@@ -132,3 +132,35 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(try await store.sweepExpired() == 1)
     #expect(try await store.recent()[0].content == "normal")
 }
+
+@Test func pinnedFloatsToTopAndSurvivesRetention() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let past = Date(timeIntervalSinceNow: -40 * 24 * 60 * 60)
+    let oldId = try await store.insert(text("old but pinned"), now: past)
+    try await store.insert(text("fresh"))
+    try await store.setPinned(true, id: oldId)
+
+    // Pinned first regardless of last_seen.
+    #expect(try await store.recent().first?.content == "old but pinned")
+    // Pinned survives the retention sweep.
+    #expect(try await store.sweepExpired() == 0)
+    #expect(try await store.count() == 2)
+}
+
+@Test func deleteRemovesClipAndBlob() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let big = Data(count: ClipContent.inlineThreshold + 10)
+    let id = try await store.insert(
+        ClipCapture(kind: .image, content: nil, representations: [.init(uti: "public.png", data: big)])
+    )
+    let blob = folder.appendingPathComponent("Blobs")
+        .appendingPathComponent(try await store.contents(of: id)[0].blobPath!)
+    #expect(FileManager.default.fileExists(atPath: blob.path))
+    try await store.delete(id: id)
+    #expect(try await store.count() == 0)
+    #expect(!FileManager.default.fileExists(atPath: blob.path))
+}

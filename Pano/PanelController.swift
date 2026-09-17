@@ -9,6 +9,7 @@ import SwiftUI
 final class PanelController {
     private let panel: KeyablePanel
     private var model: PanelModel?
+    private var keyMonitor: Any?
 
     init() {
         panel = KeyablePanel(
@@ -35,6 +36,7 @@ final class PanelController {
     var isVisible: Bool { panel.isVisible }
 
     func show() {
+        installKeyMonitor()
         positionNearCursor()
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
@@ -47,7 +49,30 @@ final class PanelController {
     }
 
     func hide() {
+        removeKeyMonitor()
         panel.orderOut(nil)
+    }
+
+    /// The search field's text editor swallows Backspace before SwiftUI's `onKeyPress` can see it,
+    /// so deleting the selected clip is handled here, ahead of the responder chain: ⌘⌫ always, and
+    /// plain Backspace when the search field is empty (nothing to edit). Runs only while visible.
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.panel.isVisible else { return event }
+            let isDeleteKey = event.keyCode == 51  // Delete / Backspace
+            let commandHeld = event.modifierFlags.contains(.command)
+            if isDeleteKey && (commandHeld || (self.model?.query.isEmpty ?? false)) {
+                self.model?.deleteSelected()
+                return nil  // consume, so the field editor does not also act on it
+            }
+            return event
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
     }
 
     /// Centred on the screen containing the mouse, biased toward the cursor, clamped to the visible
