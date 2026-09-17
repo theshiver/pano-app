@@ -6,9 +6,9 @@ import SwiftUI
 
 /// Week 0 exit check: the sandboxed app pastes a hardcoded string into TextEdit.
 struct SkeletonView: View {
-    @State private var status = [
-        PanoCore.moduleName, PanoStore.moduleName, PanoTransforms.moduleName, PanoUI.moduleName,
-    ].joined(separator: ", ")
+    @State private var status =
+        "Linked: \(PanoCore.moduleName), PanoStore, "
+        + "\(PanoTransforms.moduleName), \(PanoUI.moduleName)"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
