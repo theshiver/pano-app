@@ -62,7 +62,8 @@ docs/                  everything below
 
 Targets, entitlements and build settings are edited in `project.yml`, never in
 Xcode's UI: xcodegen overwrites `Pano/Pano.entitlements` from the `entitlements`
-block on every generate.
+block on every generate. Adding an entitlement is a product decision — stop and
+ask (see the permissions rules below).
 
 ## Where to find what
 
@@ -87,11 +88,13 @@ wrong wastes days:
    work. Do not build the main panel as a plain SwiftUI `Window` or `WindowGroup`.
 
 2. **Auto-paste posts ⌘V with `CGEvent` and needs the user's Accessibility
-   grant. Nothing else.** No Apple Events, no `temporary-exception` entitlements,
-   no System Events scripting. The entitlements file contains `app-sandbox` and
-   nothing more. This is what Maccy ships on the Mac App Store; the Apple Events
-   route was tried in week 0 and needs Accessibility anyway plus two more
-   entitlements and a second dialog. Details in `docs/adr/0003`.
+   grant.** No Apple Events, no `temporary-exception` entitlements, no System
+   Events scripting. The entitlements file contains exactly `app-sandbox` and
+   `files.user-selected.read-only` (the latter for the Settings app-picker and
+   files the user explicitly copies) — nothing else. This is essentially what
+   Maccy ships on the Mac App Store; the Apple Events route was tried in week 0
+   and needs Accessibility anyway plus two more entitlements and a second dialog.
+   Details in `docs/adr/0003`.
 
 3. **Auto-paste must be switchable off and degrade gracefully.** If the user
    does not grant Accessibility, the app still works: it puts the item on the

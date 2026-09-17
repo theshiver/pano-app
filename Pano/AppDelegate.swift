@@ -35,7 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let engine = CaptureEngine(store: store)
         self.engine = engine
-        Task { await engine.start() }
+        Task {
+            await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? [])
+            await engine.start()
+        }
 
         let panel = PanelController(prefs: prefs)
         self.panel = panel
@@ -63,9 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.model = model
         panel.setContent(PanelView(model: model), model: model)
 
-        hotKey = GlobalHotKey { [weak self] in
-            Task { @MainActor in self?.toggle() }
-        }
+        installHotKey()
 
         setUpStatusItem()
 
@@ -73,7 +74,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.onboarding = onboarding
         onboarding.showIfNeeded()
 
-        settings = SettingsController(prefs: prefs, store: store)
+        settings = SettingsController(
+            prefs: prefs, store: store,
+            onHotKeyChanged: { [weak self] in self?.installHotKey() },
+            onExclusionsChanged: { [weak self] in self?.reloadExclusions() }
+        )
+    }
+
+    /// (Re)registers the global hotkey from the current preference. Reassigning the property lets
+    /// the old GlobalHotKey deinit unregister itself first.
+    private func reloadExclusions() {
+        guard let store, let engine else { return }
+        Task { await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? []) }
+    }
+
+    private func installHotKey() {
+        guard let prefs else { return }
+        hotKey = GlobalHotKey(keyCode: prefs.hotKeyCode, modifiers: prefs.hotKeyModifiers) { [weak self] in
+            Task { @MainActor in self?.toggle() }
+        }
     }
 
     // MARK: Menu bar

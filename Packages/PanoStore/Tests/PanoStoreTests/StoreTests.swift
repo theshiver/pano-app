@@ -192,3 +192,16 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     try await store.insert(text("stale under new rule"), now: twoDaysAgo)
     #expect(try await store.sweepExpired() == 1)
 }
+
+@Test func exclusionListRoundTrips() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    try await store.addExcludedApp(bundleId: "com.apple.Terminal", displayName: "Terminal")
+    try await store.addExcludedApp(bundleId: "com.1password.1password", displayName: "1Password")
+    #expect(try await store.excludedBundleIds() == ["com.apple.Terminal", "com.1password.1password"])
+    #expect(try await store.excludedApps().map(\.displayName) == ["1Password", "Terminal"])  // ordered by name
+
+    try await store.removeExcludedApp(bundleId: "com.apple.Terminal")
+    #expect(try await store.excludedBundleIds() == ["com.1password.1password"])
+}

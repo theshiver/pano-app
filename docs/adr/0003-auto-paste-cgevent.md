@@ -30,8 +30,11 @@ entitlement, a second dialog and 70–380 ms of AppleScript latency for nothing.
 
 Do what Maccy does.
 
-- **Entitlements:** `com.apple.security.app-sandbox` only. No Apple Events, no
-  temporary exceptions, no `NSAppleEventsUsageDescription`.
+- **Entitlements:** `com.apple.security.app-sandbox` plus
+  `com.apple.security.files.user-selected.read-only` (added 2026-09-17 for the
+  Settings app-picker and cross-launch file paste-back — a user-chosen file, no
+  network implication). No Apple Events, no temporary exceptions, no
+  `NSAppleEventsUsageDescription`.
 - **Permission:** Accessibility, granted by the user in System Settings. Checked
   with `AXIsProcessTrusted()`. **The prompt is not raised by
   `AXIsProcessTrustedWithOptions`** — on macOS 26/27 `tccd` logs

@@ -201,6 +201,36 @@ public actor Store {
         return deleted
     }
 
+    // MARK: Exclusion list
+
+    public func excludedApps() throws -> [ExcludedApp] {
+        try dbQueue.read { db in
+            try ExcludedApp.order(Column("display_name")).fetchAll(db)
+        }
+    }
+
+    public func excludedBundleIds() throws -> Set<String> {
+        try dbQueue.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT bundle_id FROM excluded_app"))
+        }
+    }
+
+    public func addExcludedApp(bundleId: String, displayName: String) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(
+                sql:
+                    "INSERT OR REPLACE INTO excluded_app (bundle_id, display_name, excluded_kinds) VALUES (?, ?, NULL)",
+                arguments: [bundleId, displayName]
+            )
+        }
+    }
+
+    public func removeExcludedApp(bundleId: String) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM excluded_app WHERE bundle_id = ?", arguments: [bundleId])
+        }
+    }
+
     // MARK: Retention
 
     /// Deletes expired, unpinned clips and their orphaned blob files. Returns rows deleted.

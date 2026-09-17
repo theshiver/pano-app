@@ -10,35 +10,94 @@ import SwiftUI
 final class SettingsController {
     private let prefs: Preferences
     private let store: Store
+    private let onHotKeyChanged: () -> Void
+    private let onExclusionsChanged: () -> Void
     private var window: NSWindow?
+    private var exclusion: ExclusionModel?
 
-    init(prefs: Preferences, store: Store) {
+    init(
+        prefs: Preferences, store: Store,
+        onHotKeyChanged: @escaping () -> Void, onExclusionsChanged: @escaping () -> Void
+    ) {
         self.prefs = prefs
         self.store = store
+        self.onHotKeyChanged = onHotKeyChanged
+        self.onExclusionsChanged = onExclusionsChanged
     }
 
     func show() {
-        let window =
-            self.window
-            ?? NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 420, height: 340),
-                styleMask: [.titled, .closable], backing: .buffered, defer: false
-            )
+        // Reuse the window across opens. isReleasedWhenClosed must be false or closing it with the
+        // red button deallocates it, leaving a dangling reference and no window on the next open.
+        if let window {
+            refreshExclusions()
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 460),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
         window.title = String(localized: "Pano Settings")
         window.center()
+        let exclusion = ExclusionModel(
+            onAdd: { [weak self] in self?.pickAppToExclude() },
+            onRemove: { [weak self] bundleId in self?.removeExcludedApp(bundleId) }
+        )
+        self.exclusion = exclusion
+        refreshExclusions()
+
         window.contentView = NSHostingView(
             rootView: SettingsView(
                 prefs: prefs,
+                exclusion: exclusion,
                 onRetentionChanged: { [store, prefs] in
                     Task { await store.setRetention(prefs.retentionRules) }
                 },
-                onLaunchAtLoginChanged: { Self.setLaunchAtLogin($0) }
+                onLaunchAtLoginChanged: { Self.setLaunchAtLogin($0) },
+                onHotKeyChanged: onHotKeyChanged
             )
         )
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+    }
+
+    private func refreshExclusions() {
+        Task { @MainActor in
+            let apps = (try? await store.excludedApps()) ?? []
+            exclusion?.apps = apps
+        }
+    }
+
+    /// Lets the user pick an app to exclude. An NSOpenPanel restricted to applications gives us
+    /// sandbox-legal read access to the bundle, from which we read its identifier and name.
+    private func pickAppToExclude() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = String(localized: "Exclude")
+        guard panel.runModal() == .OK, let url = panel.url,
+            let bundle = Bundle(url: url), let bundleId = bundle.bundleIdentifier
+        else { return }
+        let name = FileManager.default.displayName(atPath: url.path)
+        Task { @MainActor in
+            try? await store.addExcludedApp(bundleId: bundleId, displayName: name)
+            refreshExclusions()
+            onExclusionsChanged()
+        }
+    }
+
+    private func removeExcludedApp(_ bundleId: String) {
+        Task { @MainActor in
+            try? await store.removeExcludedApp(bundleId: bundleId)
+            refreshExclusions()
+            onExclusionsChanged()
+        }
     }
 
     private static func setLaunchAtLogin(_ enabled: Bool) {

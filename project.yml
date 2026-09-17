@@ -49,6 +49,9 @@ targets:
       path: Pano/Pano.entitlements
       properties:
         com.apple.security.app-sandbox: true
+        # Lets the app picker (NSOpenPanel, exclusion list) and cross-launch file paste-back read a
+        # user-chosen file. Standard, benign, no network implication. See docs/adr/0003.
+        com.apple.security.files.user-selected.read-only: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cancetin.pano

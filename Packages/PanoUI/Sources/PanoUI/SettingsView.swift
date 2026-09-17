@@ -5,17 +5,23 @@ import SwiftUI
 /// through the injected closures so PanoUI stays free of the store and ServiceManagement.
 public struct SettingsView: View {
     @Bindable private var prefs: Preferences
+    private let exclusion: ExclusionModel
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
+    private let onHotKeyChanged: () -> Void
 
     public init(
         prefs: Preferences,
+        exclusion: ExclusionModel,
         onRetentionChanged: @escaping () -> Void,
-        onLaunchAtLoginChanged: @escaping (Bool) -> Void
+        onLaunchAtLoginChanged: @escaping (Bool) -> Void,
+        onHotKeyChanged: @escaping () -> Void
     ) {
         self.prefs = prefs
+        self.exclusion = exclusion
         self.onRetentionChanged = onRetentionChanged
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
+        self.onHotKeyChanged = onHotKeyChanged
     }
 
     public var body: some View {
@@ -33,6 +39,15 @@ public struct SettingsView: View {
                 Picker("Panel position", selection: $prefs.panelPosition) {
                     Text("Near the cursor").tag(PanelPosition.nearCursor)
                     Text("Centre of the active screen").tag(PanelPosition.activeScreenCentre)
+                }
+                LabeledContent("Open shortcut") {
+                    HotKeyRecorderField(display: prefs.hotKeyDisplay) { code, modifiers, display in
+                        prefs.hotKeyCode = code
+                        prefs.hotKeyModifiers = modifiers
+                        prefs.hotKeyDisplay = display
+                        onHotKeyChanged()
+                    }
+                    .frame(width: 120, height: 22)
                 }
             }
 
@@ -53,9 +68,32 @@ public struct SettingsView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
+
+            Section("Excluded apps") {
+                if exclusion.apps.isEmpty {
+                    Text("Nothing copied from an excluded app is ever recorded.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(exclusion.apps) { app in
+                        HStack {
+                            Text(app.displayName)
+                            Spacer()
+                            Button(role: .destructive) {
+                                exclusion.remove(app.bundleId)
+                            } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Remove \(app.displayName)")
+                        }
+                    }
+                }
+                Button("Add App…") { exclusion.add() }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 340)
+        .frame(width: 440, height: 460)
     }
 
     private func retentionBinding(_ keyPath: ReferenceWritableKeyPath<Preferences, Int>) -> Binding<Int> {

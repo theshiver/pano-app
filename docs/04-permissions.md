@@ -134,8 +134,10 @@ compatibility and explicitly not on behalf of App Review.
 ## Permissions Pano does not request
 
 No network entitlement. No microphone, camera, location, contacts, calendar,
-Bluetooth. Accessibility only for auto-paste, and only if the user opts in. No
-Apple Events, no temporary exceptions of any kind. No Input Monitoring — the global hotkey uses
+Bluetooth. Accessibility only for auto-paste, and only if the user opts in. The
+only file entitlement is `files.user-selected.read-only` (the app-picker and
+files the user explicitly copies); no Apple Events, no temporary exceptions of
+any kind. No Input Monitoring — the global hotkey uses
 Carbon's `RegisterEventHotKey`, which works inside the sandbox and raises no
 prompt at all.
 

@@ -116,15 +116,10 @@ always on disk. The threshold is one constant, not a per-type rule.
 **File URLs.** Store the security-scoped bookmark, not the raw path string, so a
 file copied today still resolves after the app relaunches.
 
-> **Open entitlement decision, not settled here.** Persisting and re-vending a
-> file bookmark from the sandbox likely needs
-> `com.apple.security.files.user-selected.read-only` (Maccy ships it). That is a
-> second entitlement beyond `app-sandbox`, so it contradicts the "sandbox and
-> nothing else" line in `adr/0003` and must be decided deliberately when file
-> support is actually built (week 1+), with the ADR updated. Until then, files
-> are captured and pasted **within one app session** (the bookmark resolves
-> while the app has not relaunched); cross-launch file paste waits on that
-> decision. Text, rich text and images have no such dependency.
+> **Entitlement decided (2026-09-17):** `com.apple.security.files.user-selected.read-only`
+> is now in the entitlements (it was needed for the Settings app-picker too), so a
+> user-chosen file's bookmark can be persisted and re-vended across launches. See
+> `adr/0003`.
 
 ## Deduplication
 
