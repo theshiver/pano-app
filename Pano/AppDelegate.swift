@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: PanelModel?
     private var hotKey: GlobalHotKey?
     private var statusItem: NSStatusItem?
+    private var onboarding: OnboardingController?
     private var isPaused = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -61,6 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         setUpStatusItem()
+
+        let onboarding = OnboardingController()
+        self.onboarding = onboarding
+        onboarding.showIfNeeded()
     }
 
     // MARK: Menu bar

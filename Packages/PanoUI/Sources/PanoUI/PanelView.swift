@@ -96,6 +96,9 @@ public struct PanelView: View {
     private var list: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                if model.items.isEmpty {
+                    emptyState
+                }
                 LazyVStack(spacing: 2) {
                     ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
                         ClipRow(
@@ -116,6 +119,26 @@ public struct PanelView: View {
                 if let new { proxy.scrollTo(new, anchor: .center) }
             }
         }
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        let searching = !model.query.trimmingCharacters(in: .whitespaces).isEmpty
+        VStack(spacing: 6) {
+            Image(systemName: searching ? "magnifyingglass" : "doc.on.clipboard")
+                .font(.system(size: 22))
+                .foregroundStyle(Theme.secondary(scheme))
+            Text(searching ? "No results" : "No clipboard history yet")
+                .font(Theme.rowContent)
+                .foregroundStyle(Theme.secondary(scheme))
+            if !searching {
+                Text("Copy something and it appears here.")
+                    .font(Theme.rowMeta)
+                    .foregroundStyle(Theme.secondary(scheme))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .accessibilityElement(children: .combine)
     }
 
     private var selectedItem: ClipListItem? {

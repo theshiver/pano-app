@@ -40,6 +40,24 @@ public enum PasteService {
         if !fileItems.isEmpty { pb.writeObjects(fileItems) }
     }
 
+    /// Posts a harmless synthetic event (a mouse-move to the current location) so macOS raises the
+    /// "would like to control this Mac" prompt and adds Pano to the Accessibility list. On macOS
+    /// 26/27 that prompt only appears when the app actually posts an event, so onboarding calls this
+    /// rather than an AX permission API (which does not prompt — docs/adr/0003).
+    public static func triggerAccessibilityPrompt() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let location = CGEvent(source: nil)?.location ?? .zero
+        guard
+            let move = CGEvent(
+                mouseEventSource: source, mouseType: .mouseMoved,
+                mouseCursorPosition: location, mouseButton: .left
+            )
+        else { return }
+        move.post(tap: .cgSessionEventTap)
+    }
+
+    public static var isAccessibilityTrusted: Bool { AXIsProcessTrusted() }
+
     static func postCommandV() {
         let source = CGEventSource(stateID: .combinedSessionState)
         let keyV: CGKeyCode = 9  // kVK_ANSI_V; layout-aware lookup is a later refinement
