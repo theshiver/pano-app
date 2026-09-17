@@ -53,7 +53,7 @@ is designed against.
 
 **Done when:** the name is locked in App Store Connect and the repo exists.
 
-## Day 4 — the skeleton — **done 2026-09-17** (CI pending first push)
+## Day 4 — the skeleton — **done 2026-09-17**, CI green on the first push
 
 Built with `xcodegen` from `project.yml`; the generated project is committed.
 Each package has one passing smoke test rather than a failing one, because a
