@@ -7,7 +7,7 @@ import GRDB
 public actor Store {
     private let dbQueue: DatabaseQueue
     private let blobsURL: URL
-    private let retention: RetentionRules
+    private var retention: RetentionRules
 
     /// Opens (or creates) the database and blob directory inside `folder`.
     public init(folder: URL, retention: RetentionRules = RetentionRules()) throws {
@@ -148,6 +148,12 @@ public actor Store {
 
     public func count() throws -> Int {
         try dbQueue.read { db in try Clip.fetchCount(db) }
+    }
+
+    /// Updates the retention windows applied to future inserts. Existing `expires_at` values are
+    /// left as they are; a rule change takes effect from the next copy, which is enough for v1.
+    public func setRetention(_ rules: RetentionRules) {
+        retention = rules
     }
 
     // MARK: Mutations

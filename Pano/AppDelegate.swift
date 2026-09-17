@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKey: GlobalHotKey?
     private var statusItem: NSStatusItem?
     private var onboarding: OnboardingController?
+    private var settings: SettingsController?
+    private var prefs: Preferences?
     private var isPaused = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -27,11 +29,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         self.store = store
 
+        let prefs = Preferences()
+        self.prefs = prefs
+        Task { await store.setRetention(prefs.retentionRules) }
+
         let engine = CaptureEngine(store: store)
         self.engine = engine
         Task { await engine.start() }
 
-        let panel = PanelController()
+        let panel = PanelController(prefs: prefs)
         self.panel = panel
 
         let actions = PanelActions(
@@ -66,6 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let onboarding = OnboardingController()
         self.onboarding = onboarding
         onboarding.showIfNeeded()
+
+        settings = SettingsController(prefs: prefs, store: store)
     }
 
     // MARK: Menu bar
@@ -100,6 +108,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ""
         ).target = self
 
+        menu.addItem(
+            withTitle: String(localized: "Settings…"),
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        ).target = self
+
         menu.addItem(.separator())
         menu.addItem(
             withTitle: String(localized: "Quit Pano"),
@@ -112,6 +126,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openPanel() {
         guard let panel, !panel.isVisible else { return }
         toggle()
+    }
+
+    @objc private func openSettings() {
+        settings?.show()
     }
 
     @objc private func togglePause() {

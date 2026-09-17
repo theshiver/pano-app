@@ -179,3 +179,16 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(rows.count == 1)
     #expect(rows[0].content == "pinned")
 }
+
+@Test func setRetentionAppliesToNewInserts() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    // Shrink "other" retention to 1 day, then insert something copied 2 days ago → already expired.
+    var rules = RetentionRules()
+    rules.other = 24 * 60 * 60
+    await store.setRetention(rules)
+    let twoDaysAgo = Date(timeIntervalSinceNow: -2 * 24 * 60 * 60)
+    try await store.insert(text("stale under new rule"), now: twoDaysAgo)
+    #expect(try await store.sweepExpired() == 1)
+}

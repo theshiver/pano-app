@@ -10,14 +10,20 @@ final class PanelController {
     private let panel: KeyablePanel
     private var model: PanelModel?
     private var keyMonitor: Any?
+    private let prefs: Preferences
 
-    init() {
+    init(prefs: Preferences) {
+        self.prefs = prefs
         panel = KeyablePanel(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 440),
             styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
             backing: .buffered,
             defer: true
         )
+        configure()
+    }
+
+    private func configure() {
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = true
@@ -75,17 +81,23 @@ final class PanelController {
         keyMonitor = nil
     }
 
-    /// Centred on the screen containing the mouse, biased toward the cursor, clamped to the visible
-    /// frame so the panel never crosses a screen edge (docs/adr/0005).
-    ///
-    /// TODO(settings): make this a preference — "near the cursor" (current) vs. "centre of the
-    /// active screen". Only the origin calculation needs to branch; see docs/06-roadmap.md.
+    /// Positions on the screen containing the mouse, then either biased toward the cursor or centred,
+    /// per the user's preference, clamped inside the visible frame (docs/adr/0005).
     private func positionNearCursor() {
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
         guard let visible = screen?.visibleFrame else { return }
         let size = panel.frame.size
-        var origin = NSPoint(x: mouse.x - size.width / 2, y: mouse.y - size.height * 0.75)
+        var origin: NSPoint
+        switch prefs.panelPosition {
+        case .nearCursor:
+            origin = NSPoint(x: mouse.x - size.width / 2, y: mouse.y - size.height * 0.75)
+        case .activeScreenCentre:
+            origin = NSPoint(
+                x: visible.midX - size.width / 2,
+                y: visible.midY - size.height / 2
+            )
+        }
         origin.x = min(max(visible.minX + 8, origin.x), visible.maxX - size.width - 8)
         origin.y = min(max(visible.minY + 8, origin.y), visible.maxY - size.height - 8)
         panel.setFrameOrigin(origin)

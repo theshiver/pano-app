@@ -44,10 +44,9 @@ permission flow experienced end to end, the name reserved.
 - Pinning, plain-text paste, pause, clear history
 - Auto-paste via `CGEvent`, plus the manual ⌘V fallback when Accessibility is absent
 - Permission onboarding: pasteboard access and Accessibility, explained separately
-- Settings screen, exclusion list management
-- Panel position: a Settings choice between "near the cursor" (current default) and
-  "centre of the active screen". The geometry logic already lives in PanelController;
-  only the origin calculation needs to branch on the preference.
+- Settings screen: panel position (done), retention windows (done), launch-at-login
+  (done, verify from an installed build — SMAppService may not register from a dev
+  DerivedData path). Still to add: a hotkey recorder and exclusion-list management.
 
 **Exit:** you delete Maccy.
 
