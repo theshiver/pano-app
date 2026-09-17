@@ -54,15 +54,15 @@ final class PanelController {
     }
 
     /// The search field's text editor swallows Backspace before SwiftUI's `onKeyPress` can see it,
-    /// so deleting the selected clip is handled here, ahead of the responder chain: ⌘⌫ always, and
-    /// plain Backspace when the search field is empty (nothing to edit). Runs only while visible.
+    /// so deleting the selected clip is handled here, ahead of the responder chain. Only ⌘⌫ deletes,
+    /// never a plain Backspace — otherwise clearing the search query one character too far would
+    /// destroy a clip. Runs only while the panel is visible.
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel.isVisible else { return event }
             let isDeleteKey = event.keyCode == 51  // Delete / Backspace
-            let commandHeld = event.modifierFlags.contains(.command)
-            if isDeleteKey && (commandHeld || (self.model?.query.isEmpty ?? false)) {
+            if isDeleteKey && event.modifierFlags.contains(.command) {
                 self.model?.deleteSelected()
                 return nil  // consume, so the field editor does not also act on it
             }
