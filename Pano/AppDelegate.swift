@@ -58,6 +58,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     await PasteService.paste(payload)
                 }
             },
+            pasteText: { [weak panel] text in
+                Task { @MainActor in
+                    panel?.hide()
+                    try? await Task.sleep(for: .milliseconds(60))
+                    await PasteService.paste([("public.utf8-plain-text", Data(text.utf8))])
+                }
+            },
             close: { [weak panel] in
                 Task { @MainActor in panel?.hide() }
             }

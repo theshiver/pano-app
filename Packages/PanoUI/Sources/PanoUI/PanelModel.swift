@@ -1,5 +1,6 @@
 import Foundation
 import PanoStore
+import PanoTransforms
 
 /// Drives the panel: loads recent clips, runs search as the query changes, tracks the selected
 /// row **by clip id** (so selection survives an async reload), and forwards a paste to the app
@@ -11,7 +12,11 @@ public final class PanelModel {
     public var query: String = "" {
         didSet { if query != oldValue { reload() } }
     }
-    public private(set) var selectedId: Int64?
+    public private(set) var selectedId: Int64? {
+        didSet { if selectedId != oldValue { activeTransformId = nil } }
+    }
+    /// The transform whose chip is active in the preview, if any.
+    public var activeTransformId: String?
     /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
     public var commandHeld: Bool = false
 
@@ -48,6 +53,35 @@ public final class PanelModel {
         return (try? trimmed.isEmpty ? await store.recent() : await store.search(trimmed)) ?? []
     }
 
+    // MARK: Transforms & selection
+
+    public var selectedItem: ClipListItem? {
+        items.first { $0.id == selectedId }
+    }
+
+    public var availableTransforms: [any Transform] {
+        guard let content = selectedItem?.content, !content.isEmpty else { return [] }
+        return Transforms.applicable(to: content)
+    }
+
+    public var activeTransform: (any Transform)? {
+        availableTransforms.first { $0.id == activeTransformId }
+    }
+
+    public var transformOutput: TransformOutput? {
+        guard let transform = activeTransform, let content = selectedItem?.content else { return nil }
+        return try? transform.apply(content)
+    }
+
+    public func toggleTransform(_ id: String) {
+        activeTransformId = (activeTransformId == id) ? nil : id
+    }
+
+    /// Pastes an arbitrary string (a transformed value or a colour format row) as plain text.
+    public func pasteText(_ text: String) {
+        actions.pasteText(text)
+    }
+
     // MARK: Keyboard
 
     public func moveSelection(by delta: Int) {
@@ -63,7 +97,11 @@ public final class PanelModel {
 
     public func pasteSelected(plainText: Bool = false) {
         guard let selectedId else { return }
-        actions.paste(selectedId, plainText)
+        if !plainText, let output = transformOutput {
+            actions.pasteText(output.text)  // ⏎ with a transform active pastes the transformed value
+        } else {
+            actions.paste(selectedId, plainText)  // ⇧⏎ (or no transform) pastes the stored item
+        }
     }
 
     /// Numbered quick-paste: ⌘1…⌘9 paste the nth visible row (1-based).

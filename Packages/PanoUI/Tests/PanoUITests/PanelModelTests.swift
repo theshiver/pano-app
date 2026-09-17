@@ -9,7 +9,7 @@ private func makeModel() throws -> (PanelModel, Store, URL) {
     let folder = URL(fileURLWithPath: NSTemporaryDirectory())
         .appendingPathComponent("pano-ui-\(UUID().uuidString)", isDirectory: true)
     let store = try Store(folder: folder)
-    let actions = PanelActions(paste: { _, _ in }, close: {})
+    let actions = PanelActions(paste: { _, _ in }, pasteText: { _ in }, close: {})
     return (PanelModel(store: store, actions: actions), store, folder)
 }
 

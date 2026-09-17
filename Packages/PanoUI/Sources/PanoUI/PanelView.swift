@@ -27,7 +27,7 @@ public struct PanelView: View {
                 }
                 .frame(width: Theme.listWidth)
                 Divider()
-                PreviewPane(item: selectedItem)
+                PreviewPane(model: model)
                     .frame(maxWidth: .infinity)
             }
             Divider()
@@ -141,7 +141,4 @@ public struct PanelView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var selectedItem: ClipListItem? {
-        model.items.first { $0.id == model.selectedId }
-    }
 }
