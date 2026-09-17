@@ -73,7 +73,9 @@ Now inside this repo.
    target, and verify the spike's paste path still works from inside `Pano`.
 
 **Done when:** `main` builds, CI is green, and the app — which does nothing yet —
-can already paste a hardcoded string into TextEdit.
+can already paste a hardcoded string into TextEdit. **All true 2026-09-17.**
+The Accessibility prompt, and the finding that it is triggered by posting an
+event rather than by a permission API, is in `docs/adr/0003`.
 
 ## What week 0 is not
 

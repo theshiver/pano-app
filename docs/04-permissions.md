@@ -78,15 +78,21 @@ many dialogs and entitlements sit on top of that one grant.
 
 ```
 Entitlements: com.apple.security.app-sandbox
-Permission:   Accessibility (System Settings → Privacy & Security → Accessibility)
+Permission:   Accessibility (System Settings → Privacy & Security → Device Control and Data Access)
 Check:        AXIsProcessTrusted()
-Prompt:       AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true]), from onboarding only
+Prompt:       raised by posting the first CGEvent, NOT by AXIsProcessTrustedWithOptions
+Deep link:    x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility
 ```
 
-The prompt macOS shows is *"Pano would like to control this Mac and access your
-data"* with an *Open System Settings* button. The user flips a switch there.
-Onboarding has to say this before triggering it, and has to cope with the user
-coming back without having done it.
+On macOS 26/27, `AXIsProcessTrustedWithOptions(...prompt: true)` does **not**
+show a dialog — `tccd` logs *"kTCCServiceAccessibility does not allow
+prompting"*. The prompt *"Pano would like to control this Mac and access your
+data"* (with *Open System Settings*) appears the first time the app **posts an
+event**, and macOS adds Pano to the list (unchecked) at that moment. So
+onboarding triggers the prompt by attempting a paste, then polls
+`AXIsProcessTrusted()` while the user flips the one switch. The deep link opens
+the right pane (verified on macOS 27). The pane is now labelled *Device Control
+and Data Access*, not *Accessibility*.
 
 Sequence:
 

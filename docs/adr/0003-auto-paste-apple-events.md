@@ -33,9 +33,21 @@ Do what Maccy does.
 - **Entitlements:** `com.apple.security.app-sandbox` only. No Apple Events, no
   temporary exceptions, no `NSAppleEventsUsageDescription`.
 - **Permission:** Accessibility, granted by the user in System Settings. Checked
-  with `AXIsProcessTrusted()`; prompted once with
-  `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` from
-  onboarding, never from the paste path.
+  with `AXIsProcessTrusted()`. **The prompt is not raised by
+  `AXIsProcessTrustedWithOptions`** — on macOS 26/27 `tccd` logs
+  *"Service kTCCServiceAccessibility does not allow prompting; returning
+  Unknown"* and no dialog appears. The system disclosure prompt (*"Pano would
+  like to control this Mac"*, with an *Open System Settings* button) is instead
+  raised the first time the app **posts an event**, and macOS adds the app to
+  the Device Control and Data Access list (unchecked) at that moment. So the
+  onboarding trigger is attempting the paste, not a permission API. Verified on
+  macOS 27.0, 2026-09-17.
+- **Onboarding flow:** post ⌘V once → system shows the prompt and lists Pano →
+  user opens Settings and flips the one toggle → poll `AXIsProcessTrusted()` and
+  continue. There is no API to grant Accessibility inline; every clipboard
+  manager on the Mac works this way. Pair the system prompt with our own button
+  that deep-links to the pane (`x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility`,
+  confirmed to open Device Control and Data Access on macOS 27).
 - **Paste:** write the item to `NSPasteboard.general`, hide the panel so the
   previous app regains key focus, post ⌘V key-down and key-up with
   `CGEvent(keyboardEventSource:virtualKey:keyDown:)` on `.cgSessionEventTap`.
