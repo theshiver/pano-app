@@ -64,7 +64,8 @@ Do what Maccy does.
   back as its own `NSPasteboardItem` via `writeObjects`; other types go on the
   first item with `setData`. Verified round trips: rich text from Safari, pixels
   from Preview, one and two files from Finder into TextEdit, and files into a
-  Finder folder.
+  Finder folder. How these are stored (per-representation table, PNG over TIFF,
+  64 KB inline threshold, file bookmarks) is in `03-data-model.md`.
 
 ## Consequences
 
@@ -77,8 +78,11 @@ Do what Maccy does.
 - The review notes in `ops/app-store-connect.md` say the opposite of what this
   ADR now says and must be rewritten before submission.
 - Storing TIFF for images is expensive (Preview put a multi-megabyte TIFF next to
-  the PNG). Whether Pano stores PNG only is a `03-data-model.md` decision, not
-  this ADR's.
+  the PNG). Resolved in `03-data-model.md`: store PNG, drop TIFF when both are
+  present.
+- Cross-launch file paste-back may need a second entitlement
+  (`files.user-selected.read-only`); flagged as an open decision in
+  `03-data-model.md`, not taken here.
 
 ## Lessons for the docs
 

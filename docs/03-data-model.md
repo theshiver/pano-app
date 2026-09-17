@@ -2,18 +2,23 @@
 
 One SQLite file, GRDB, FTS5. Location:
 `~/Library/Application Support/Pano/pano.sqlite`, WAL mode, file protection on.
-Large image payloads live beside it in `Blobs/`, not in the database.
+Large binary representations live beside it in `Blobs/`, not in the database.
 
 ## Schema
+
+A clip is metadata plus one or more **content representations**. The pasteboard
+hands over several UTIs for one copy (rich text carries `public.rtf`,
+`public.html`, `public.utf8-plain-text`; an image carries `public.png` and
+`public.tiff`), and paste-back has to write them all so the target app picks its
+preferred one (see `adr/0003`). A single `payload` column cannot hold that, so
+the representations live in their own table, ordered.
 
 ```sql
 CREATE TABLE clip (
     id              INTEGER PRIMARY KEY,
     kind            TEXT NOT NULL,        -- text|richtext|code|url|colour|image|file
     content         TEXT,                 -- the searchable text form; NULL for pure binary
-    payload_path    TEXT,                 -- relative path under Blobs/ for image and file
-    payload_types   TEXT NOT NULL,        -- JSON array of the original UTI list
-    byte_size       INTEGER NOT NULL,
+    byte_size       INTEGER NOT NULL,     -- sum of all representations' bytes
     content_hash    TEXT NOT NULL,        -- SHA-256 of the canonical payload
     source_bundle_id TEXT,
     source_name     TEXT,
@@ -27,6 +32,23 @@ CREATE TABLE clip (
     last_seen_at    REAL NOT NULL,
     expires_at      REAL                  -- NULL means "never", set by the retention rule
 );
+
+-- One row per pasteboard representation, in the source app's preference order.
+-- Small reps (text, rtf, html) sit inline in `data`; large binaries (png, tiff,
+-- file bookmarks) go to `blob_path` and `data` is NULL. Exactly one of the two
+-- is non-NULL. On paste-back these are written in `position` order; each
+-- `public.file-url` becomes its own NSPasteboardItem, the rest go on the first.
+CREATE TABLE clip_content (
+    clip_id    INTEGER NOT NULL REFERENCES clip(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL,   -- 0-based, the order item.types listed them
+    uti        TEXT NOT NULL,      -- e.g. public.rtf, public.png, public.file-url
+    data       BLOB,               -- inline bytes, or NULL when stored on disk
+    blob_path  TEXT,               -- relative path under Blobs/, or NULL when inline
+    byte_size  INTEGER NOT NULL,
+    PRIMARY KEY (clip_id, position)
+);
+
+CREATE INDEX idx_content_blob ON clip_content(blob_path) WHERE blob_path IS NOT NULL;
 
 CREATE UNIQUE INDEX idx_clip_hash ON clip(content_hash);
 CREATE INDEX idx_clip_last_seen  ON clip(last_seen_at DESC);
@@ -72,12 +94,49 @@ migration, not in Swift.
 `remove_diacritics 2` matters for Turkish: searching "sayfa" should find "şayfa"
 and searching "goruntu" should find "görüntü".
 
+## Which representations are stored
+
+The capture loop keeps only this whitelist, in the order the pasteboard item
+listed them: `public.file-url`, `public.html`, `public.png`, `public.rtf`,
+`public.utf8-plain-text`, `public.tiff`. Everything else — `dyn.*`, Finder's
+private `com.apple.finder.noderef`, app-specific flavours — is dropped, because
+it is either irreproducible or noise (verified in the week 0 spike; keeping
+`noderef` was what corrupted Finder file pastes).
+
+**Images: PNG wins.** When an item carries both `public.png` and `public.tiff`,
+store the PNG and drop the TIFF. TIFF from a screenshot or Preview is several MB
+against a few hundred KB of PNG, and every target that accepts TIFF accepts PNG.
+Keep TIFF only when it is the sole image representation on the pasteboard.
+
+**Inline vs. blob.** A representation under 64 KB goes in `clip_content.data`;
+at or above that it goes to a file under `Blobs/` and `data` is NULL. Text,
+RTF and HTML are almost always inline; PNG, TIFF and file bookmarks are almost
+always on disk. The threshold is one constant, not a per-type rule.
+
+**File URLs.** Store the security-scoped bookmark, not the raw path string, so a
+file copied today still resolves after the app relaunches.
+
+> **Open entitlement decision, not settled here.** Persisting and re-vending a
+> file bookmark from the sandbox likely needs
+> `com.apple.security.files.user-selected.read-only` (Maccy ships it). That is a
+> second entitlement beyond `app-sandbox`, so it contradicts the "sandbox and
+> nothing else" line in `adr/0003` and must be decided deliberately when file
+> support is actually built (week 1+), with the ADR updated. Until then, files
+> are captured and pasted **within one app session** (the bookmark resolves
+> while the app has not relaunched); cross-launch file paste waits on that
+> decision. Text, rich text and images have no such dependency.
+
 ## Deduplication
 
-`content_hash` is a SHA-256 over the canonical payload — the UTF-8 bytes for
-text, the raw data for images. On a collision with an existing row, do not
-insert: bump `copy_count`, set `last_seen_at`, and leave `created_at` alone.
-This is what makes the v1.1 frequency hint possible without extra bookkeeping.
+`content_hash` is a SHA-256 over the canonical representation — the
+`public.utf8-plain-text` bytes when there is a text form, otherwise the bytes of
+the first stored representation. Hashing one representation, not all of them,
+keeps dedup stable when an app varies a secondary flavour between copies. On a
+collision with an existing row, do not insert: bump `copy_count`, set
+`last_seen_at`, and leave `created_at` alone. This is what makes the v1.1
+frequency hint possible without extra bookkeeping, and it is also how a
+just-pasted item (which lands back on the pasteboard) folds into its existing
+row instead of creating a duplicate — see `adr/0003`.
 
 ## Sensitive-pattern detection
 
