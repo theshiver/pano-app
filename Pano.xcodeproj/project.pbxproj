@@ -1,0 +1,387 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		23077BA48DBF6C69EAFAD2AA /* PanoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 977794DDCB01F542A74826C4 /* PanoCore */; };
+		430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168A8E4B981B98CCA2740F4B /* PanoApp.swift */; };
+		6CFC8A323106CD15AC8E219A /* SkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C031B54B378131D9EFC2385 /* SkeletonView.swift */; };
+		877526EDEB261E68FA820307 /* PasteProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11622BBCCC425E1D000CF70E /* PasteProbe.swift */; };
+		AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8992C5DECD288DF58410A7C3 /* PanoUI */; };
+		C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9568E340008D408C1E2903 /* PanoStore */; };
+		D8FBD0161FA8AD0F8FDB5954 /* PanoTransforms in Frameworks */ = {isa = PBXBuildFile; productRef = C56539CEB87A16AEA90C5B55 /* PanoTransforms */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0C031B54B378131D9EFC2385 /* SkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonView.swift; sourceTree = "<group>"; };
+		11622BBCCC425E1D000CF70E /* PasteProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteProbe.swift; sourceTree = "<group>"; };
+		157C9C9E05396F29C5B4E202 /* PanoCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoCore; path = Packages/PanoCore; sourceTree = SOURCE_ROOT; };
+		168A8E4B981B98CCA2740F4B /* PanoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanoApp.swift; sourceTree = "<group>"; };
+		3CEC72F0359DFAF3B509770D /* PanoStore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoStore; path = Packages/PanoStore; sourceTree = SOURCE_ROOT; };
+		4FB6A4D5645A7B9973F456BF /* PanoTransforms */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoTransforms; path = Packages/PanoTransforms; sourceTree = SOURCE_ROOT; };
+		6A218AC9DEFFD58C4B5CE29A /* PanoUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoUI; path = Packages/PanoUI; sourceTree = SOURCE_ROOT; };
+		AF22A45DD1021A67EE7E2992 /* Pano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pano.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4C4BD6846A232B56A9308CDB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23077BA48DBF6C69EAFAD2AA /* PanoCore in Frameworks */,
+				C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */,
+				D8FBD0161FA8AD0F8FDB5954 /* PanoTransforms in Frameworks */,
+				AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3D49DCD55D9F129938C0318B /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				157C9C9E05396F29C5B4E202 /* PanoCore */,
+				3CEC72F0359DFAF3B509770D /* PanoStore */,
+				4FB6A4D5645A7B9973F456BF /* PanoTransforms */,
+				6A218AC9DEFFD58C4B5CE29A /* PanoUI */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		9041E66E7636EFE28CF48014 /* Pano */ = {
+			isa = PBXGroup;
+			children = (
+				168A8E4B981B98CCA2740F4B /* PanoApp.swift */,
+				11622BBCCC425E1D000CF70E /* PasteProbe.swift */,
+				0C031B54B378131D9EFC2385 /* SkeletonView.swift */,
+			);
+			path = Pano;
+			sourceTree = "<group>";
+		};
+		DE99606B32239831455A34F4 = {
+			isa = PBXGroup;
+			children = (
+				3D49DCD55D9F129938C0318B /* Packages */,
+				9041E66E7636EFE28CF48014 /* Pano */,
+				E07A5A79E5A3B30D4212C3C0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E07A5A79E5A3B30D4212C3C0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AF22A45DD1021A67EE7E2992 /* Pano.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8DDB707C189A268FBDCB6BF1 /* Pano */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8441B2EAA775F26D58171361 /* Build configuration list for PBXNativeTarget "Pano" */;
+			buildPhases = (
+				D467BA56F02CC137BA3B3B4D /* Sources */,
+				4C4BD6846A232B56A9308CDB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Pano;
+			packageProductDependencies = (
+				977794DDCB01F542A74826C4 /* PanoCore */,
+				6F9568E340008D408C1E2903 /* PanoStore */,
+				C56539CEB87A16AEA90C5B55 /* PanoTransforms */,
+				8992C5DECD288DF58410A7C3 /* PanoUI */,
+			);
+			productName = Pano;
+			productReference = AF22A45DD1021A67EE7E2992 /* Pano.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		008C2F617461949A73DD2843 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					8DDB707C189A268FBDCB6BF1 = {
+						DevelopmentTeam = S2RH54MMT3;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 993E12C3E55FF7FE04FB49F6 /* Build configuration list for PBXProject "Pano" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = DE99606B32239831455A34F4;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				00B113D059FB6942A3CBFC5D /* XCLocalSwiftPackageReference "Packages/PanoCore" */,
+				0B2E386F931891B1C90DE24A /* XCLocalSwiftPackageReference "Packages/PanoStore" */,
+				1B1E051E378939908A3373A1 /* XCLocalSwiftPackageReference "Packages/PanoTransforms" */,
+				ACE2BD48D2749BAF81F3158D /* XCLocalSwiftPackageReference "Packages/PanoUI" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E07A5A79E5A3B30D4212C3C0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8DDB707C189A268FBDCB6BF1 /* Pano */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D467BA56F02CC137BA3B3B4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */,
+				877526EDEB261E68FA820307 /* PasteProbe.swift in Sources */,
+				6CFC8A323106CD15AC8E219A /* SkeletonView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2703AF2C0E2FB3BD22F74945 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		5A4EB56CB0427C6716EFBD29 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = S2RH54MMT3;
+				INFOPLIST_FILE = Pano/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
+				PRODUCT_NAME = Pano;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8DECDEE9F96B6A693D7A53D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		FFA4128280FC8D007E085EAE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = S2RH54MMT3;
+				INFOPLIST_FILE = Pano/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
+				PRODUCT_NAME = Pano;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8441B2EAA775F26D58171361 /* Build configuration list for PBXNativeTarget "Pano" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A4EB56CB0427C6716EFBD29 /* Debug */,
+				FFA4128280FC8D007E085EAE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		993E12C3E55FF7FE04FB49F6 /* Build configuration list for PBXProject "Pano" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8DECDEE9F96B6A693D7A53D8 /* Debug */,
+				2703AF2C0E2FB3BD22F74945 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		00B113D059FB6942A3CBFC5D /* XCLocalSwiftPackageReference "Packages/PanoCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PanoCore;
+		};
+		0B2E386F931891B1C90DE24A /* XCLocalSwiftPackageReference "Packages/PanoStore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PanoStore;
+		};
+		1B1E051E378939908A3373A1 /* XCLocalSwiftPackageReference "Packages/PanoTransforms" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PanoTransforms;
+		};
+		ACE2BD48D2749BAF81F3158D /* XCLocalSwiftPackageReference "Packages/PanoUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PanoUI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6F9568E340008D408C1E2903 /* PanoStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PanoStore;
+		};
+		8992C5DECD288DF58410A7C3 /* PanoUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PanoUI;
+		};
+		977794DDCB01F542A74826C4 /* PanoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PanoCore;
+		};
+		C56539CEB87A16AEA90C5B55 /* PanoTransforms */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PanoTransforms;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 008C2F617461949A73DD2843 /* Project object */;
+}

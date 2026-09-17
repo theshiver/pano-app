@@ -1,0 +1,48 @@
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+## Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Swift Package Manager
+.build/
+.swiftpm/
+Packages/*/.build/
+Package.resolved.backup
+
+## Signing — never commit these
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+AuthKey_*.p8
+ExportOptions.plist
+
+## Local artefacts
+*.dmg
+*.pkg
+*.zip
+fastlane/report.xml
+fastlane/screenshots/
+.env
+.env.local
+
+## Never commit a real clipboard database
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
