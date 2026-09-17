@@ -164,3 +164,18 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(try await store.count() == 0)
     #expect(!FileManager.default.fileExists(atPath: blob.path))
 }
+
+@Test func clearHistoryKeepsPinned() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let keep = try await store.insert(text("pinned"))
+    try await store.insert(text("a"))
+    try await store.insert(text("b"))
+    try await store.setPinned(true, id: keep)
+
+    #expect(try await store.clearHistory() == 2)
+    let rows = try await store.recent()
+    #expect(rows.count == 1)
+    #expect(rows[0].content == "pinned")
+}

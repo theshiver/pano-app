@@ -174,6 +174,27 @@ public actor Store {
         }
     }
 
+    /// Clears the history: deletes every unpinned clip and its blob files, leaving pinned items.
+    /// Returns the number of clips removed.
+    @discardableResult
+    public func clearHistory() throws -> Int {
+        let (deleted, blobs) = try dbQueue.write { db -> (Int, [String]) in
+            let ids = try Int64.fetchAll(db, sql: "SELECT id FROM clip WHERE is_pinned = 0")
+            guard !ids.isEmpty else { return (0, []) }
+            let list = ids.map { "\($0)" }.joined(separator: ",")
+            let paths = try String.fetchAll(
+                db,
+                sql: "SELECT blob_path FROM clip_content WHERE clip_id IN (\(list)) AND blob_path IS NOT NULL"
+            )
+            try db.execute(sql: "DELETE FROM clip WHERE id IN (\(list))")
+            return (ids.count, paths)
+        }
+        for name in blobs {
+            try? FileManager.default.removeItem(at: blobsURL.appendingPathComponent(name))
+        }
+        return deleted
+    }
+
     // MARK: Retention
 
     /// Deletes expired, unpinned clips and their orphaned blob files. Returns rows deleted.

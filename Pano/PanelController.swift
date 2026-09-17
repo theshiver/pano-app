@@ -77,6 +77,9 @@ final class PanelController {
 
     /// Centred on the screen containing the mouse, biased toward the cursor, clamped to the visible
     /// frame so the panel never crosses a screen edge (docs/adr/0005).
+    ///
+    /// TODO(settings): make this a preference — "near the cursor" (current) vs. "centre of the
+    /// active screen". Only the origin calculation needs to branch; see docs/06-roadmap.md.
     private func positionNearCursor() {
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main

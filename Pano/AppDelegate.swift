@@ -13,6 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: PanelController?
     private var model: PanelModel?
     private var hotKey: GlobalHotKey?
+    private var statusItem: NSStatusItem?
+    private var isPaused = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let store: Store
@@ -56,6 +58,79 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hotKey = GlobalHotKey { [weak self] in
             Task { @MainActor in self?.toggle() }
+        }
+
+        setUpStatusItem()
+    }
+
+    // MARK: Menu bar
+
+    /// The menu-bar item is the only always-visible control: pause/resume capture, clear history,
+    /// open the panel, and quit — the app is an accessory (LSUIElement) with no Dock icon, so
+    /// without this there is no way to quit it.
+    private func setUpStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.image = NSImage(
+            systemSymbolName: "doc.on.clipboard",
+            accessibilityDescription: "Pano"
+        )
+        item.menu = buildMenu()
+        statusItem = item
+    }
+
+    private func buildMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(
+            withTitle: String(localized: "Open Pano"),
+            action: #selector(openPanel),
+            keyEquivalent: ""
+        ).target = self
+
+        let pauseTitle = isPaused ? String(localized: "Resume Pano") : String(localized: "Pause Pano")
+        menu.addItem(withTitle: pauseTitle, action: #selector(togglePause), keyEquivalent: "").target = self
+
+        menu.addItem(
+            withTitle: String(localized: "Clear History…"),
+            action: #selector(clearHistory),
+            keyEquivalent: ""
+        ).target = self
+
+        menu.addItem(.separator())
+        menu.addItem(
+            withTitle: String(localized: "Quit Pano"),
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        return menu
+    }
+
+    @objc private func openPanel() {
+        guard let panel, !panel.isVisible else { return }
+        toggle()
+    }
+
+    @objc private func togglePause() {
+        isPaused.toggle()
+        let paused = isPaused
+        Task { await engine?.setPaused(paused) }
+        statusItem?.menu = buildMenu()
+        statusItem?.button?.appearsDisabled = paused
+    }
+
+    @objc private func clearHistory() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Clear clipboard history?")
+        alert.informativeText = String(
+            localized: "This deletes all unpinned items. Pinned items are kept. This cannot be undone."
+        )
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "Clear"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task { @MainActor in
+            try? await store?.clearHistory()
+            model?.reload()
         }
     }
 

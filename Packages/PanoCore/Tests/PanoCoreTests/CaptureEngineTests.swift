@@ -63,4 +63,28 @@ struct CaptureEngineTests {
         #expect(await engine.tick() == nil)
         #expect(try await store.count() == 0)
     }
+
+    @Test func pausedEngineRecordsNothing() async throws {
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("pano-pause-\(UUID().uuidString)", isDirectory: true)
+        let store = try Store(folder: folder)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let engine = CaptureEngine(store: store)
+        await engine.setPaused(true)
+
+        let pb = NSPasteboard.general
+        let saved = pb.string(forType: .string)
+        defer {
+            if let saved {
+                pb.clearContents()
+                pb.setString(saved, forType: .string)
+            }
+        }
+        pb.clearContents()
+        pb.setString("while paused", forType: .string)
+
+        #expect(await engine.tick() == nil)
+        #expect(try await store.count() == 0)
+    }
 }

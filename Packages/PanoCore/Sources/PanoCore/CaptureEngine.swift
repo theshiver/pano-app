@@ -11,6 +11,7 @@ public actor CaptureEngine {
     private var excludedBundleIds: Set<String>
     private var lastChangeCount: Int
     private var task: Task<Void, Never>?
+    private var paused = false
 
     public init(
         store: Store,
@@ -26,6 +27,15 @@ public actor CaptureEngine {
     public func setExcludedBundleIds(_ ids: Set<String>) {
         excludedBundleIds = ids
     }
+
+    /// While paused, the loop keeps running but records nothing; new copies are ignored until
+    /// resumed. Resuming does not back-fill what was copied while paused.
+    public func setPaused(_ value: Bool) {
+        paused = value
+        if value { lastChangeCount = NSPasteboard.general.changeCount }
+    }
+
+    public var isPaused: Bool { paused }
 
     public func start() {
         guard task == nil else { return }
@@ -46,6 +56,7 @@ public actor CaptureEngine {
     /// Exposed so a test can drive a single tick deterministically instead of waiting on the timer.
     @discardableResult
     public func tick() async -> Int64? {
+        guard !paused else { return nil }
         let pb = NSPasteboard.general
         let change = pb.changeCount
         guard change != lastChangeCount else { return nil }
