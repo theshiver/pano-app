@@ -41,6 +41,8 @@ targets:
       - package: PanoUI
     info:
       path: Pano/Info.plist
+      properties:
+        LSUIElement: true
     # xcodegen writes Pano/Pano.entitlements from this block; edit here, not the file.
     # The entitlements file is a product statement (docs/04-permissions.md): sandbox and nothing else.
     entitlements:

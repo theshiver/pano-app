@@ -1,12 +1,15 @@
 import SwiftUI
 
+/// Menu-bar accessory (LSUIElement, no Dock icon, no windows of its own — docs/adr/0005).
+/// All the real work is set up by the app delegate; the Settings scene exists only so the app
+/// has a valid scene and a place for preferences later.
 @main
 struct PanoApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+
     var body: some Scene {
-        // Week 0 skeleton. The real UI is an NSPanel hosted from an AppDelegate (docs/adr/0005);
-        // this window exists only to prove the paste path from inside the sandboxed app target.
-        WindowGroup("Pano") {
-            SkeletonView()
+        Settings {
+            EmptyView()
         }
     }
 }

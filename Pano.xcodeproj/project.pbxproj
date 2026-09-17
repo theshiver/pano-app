@@ -9,18 +9,20 @@
 /* Begin PBXBuildFile section */
 		23077BA48DBF6C69EAFAD2AA /* PanoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 977794DDCB01F542A74826C4 /* PanoCore */; };
 		430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168A8E4B981B98CCA2740F4B /* PanoApp.swift */; };
-		6CFC8A323106CD15AC8E219A /* SkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C031B54B378131D9EFC2385 /* SkeletonView.swift */; };
-		877526EDEB261E68FA820307 /* PasteProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11622BBCCC425E1D000CF70E /* PasteProbe.swift */; };
+		64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */; };
 		AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8992C5DECD288DF58410A7C3 /* PanoUI */; };
 		C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9568E340008D408C1E2903 /* PanoStore */; };
 		D8FBD0161FA8AD0F8FDB5954 /* PanoTransforms in Frameworks */ = {isa = PBXBuildFile; productRef = C56539CEB87A16AEA90C5B55 /* PanoTransforms */; };
+		E5E28B945B3C06AC280BEE97 /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */; };
+		F0B4ABE62C96658817473B01 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24816FD7623B37E865E76662 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0C031B54B378131D9EFC2385 /* SkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonView.swift; sourceTree = "<group>"; };
-		11622BBCCC425E1D000CF70E /* PasteProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteProbe.swift; sourceTree = "<group>"; };
 		157C9C9E05396F29C5B4E202 /* PanoCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoCore; path = Packages/PanoCore; sourceTree = SOURCE_ROOT; };
 		168A8E4B981B98CCA2740F4B /* PanoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanoApp.swift; sourceTree = "<group>"; };
+		24816FD7623B37E865E76662 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKey.swift; sourceTree = "<group>"; };
+		2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
 		3CEC72F0359DFAF3B509770D /* PanoStore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoStore; path = Packages/PanoStore; sourceTree = SOURCE_ROOT; };
 		4FB6A4D5645A7B9973F456BF /* PanoTransforms */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoTransforms; path = Packages/PanoTransforms; sourceTree = SOURCE_ROOT; };
 		6A218AC9DEFFD58C4B5CE29A /* PanoUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoUI; path = Packages/PanoUI; sourceTree = SOURCE_ROOT; };
@@ -56,9 +58,10 @@
 		9041E66E7636EFE28CF48014 /* Pano */ = {
 			isa = PBXGroup;
 			children = (
+				24816FD7623B37E865E76662 /* AppDelegate.swift */,
+				270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */,
+				2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */,
 				168A8E4B981B98CCA2740F4B /* PanoApp.swift */,
-				11622BBCCC425E1D000CF70E /* PasteProbe.swift */,
-				0C031B54B378131D9EFC2385 /* SkeletonView.swift */,
 			);
 			path = Pano;
 			sourceTree = "<group>";
@@ -150,9 +153,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F0B4ABE62C96658817473B01 /* AppDelegate.swift in Sources */,
+				64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */,
+				E5E28B945B3C06AC280BEE97 /* PanelController.swift in Sources */,
 				430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */,
-				877526EDEB261E68FA820307 /* PasteProbe.swift in Sources */,
-				6CFC8A323106CD15AC8E219A /* SkeletonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

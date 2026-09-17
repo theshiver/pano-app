@@ -132,6 +132,19 @@ public actor Store {
         }
     }
 
+    /// The stored representations of a clip, in order, with their bytes loaded (inline or from a
+    /// blob file). This is what PasteService writes back to the pasteboard.
+    public func payload(of clipId: Int64) throws -> [(uti: String, data: Data)] {
+        try contents(of: clipId).map { content in
+            if let data = content.data {
+                return (content.uti, data)
+            }
+            guard let name = content.blobPath else { return (content.uti, Data()) }
+            let data = try Data(contentsOf: blobsURL.appendingPathComponent(name))
+            return (content.uti, data)
+        }
+    }
+
     public func count() throws -> Int {
         try dbQueue.read { db in try Clip.fetchCount(db) }
     }

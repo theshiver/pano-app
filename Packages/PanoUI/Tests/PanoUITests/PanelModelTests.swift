@@ -1,0 +1,75 @@
+import Foundation
+import Testing
+
+@testable import PanoStore
+@testable import PanoUI
+
+@MainActor
+private func makeModel() throws -> (PanelModel, Store, URL) {
+    let folder = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("pano-ui-\(UUID().uuidString)", isDirectory: true)
+    let store = try Store(folder: folder)
+    let actions = PanelActions(paste: { _ in }, close: {})
+    return (PanelModel(store: store, actions: actions), store, folder)
+}
+
+private func text(_ s: String) -> ClipCapture {
+    ClipCapture(kind: .text, content: s, representations: [.init(uti: "public.utf8-plain-text", data: Data(s.utf8))])
+}
+
+@MainActor
+@Test func activateSelectsNewestFirst() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let now = Date()
+    try await store.insert(text("oldest"), now: now)
+    try await store.insert(text("newest"), now: now.addingTimeInterval(10))
+
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.items.first?.content == "newest")
+    #expect(model.selectedId == model.items.first?.id)
+}
+
+@MainActor
+@Test func arrowSelectionMovesByID() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let now = Date()
+    try await store.insert(text("a"), now: now)
+    try await store.insert(text("b"), now: now.addingTimeInterval(10))
+    try await store.insert(text("c"), now: now.addingTimeInterval(20))
+
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.items.map(\.content) == ["c", "b", "a"])
+    #expect(model.selectedId == model.items[0].id)
+
+    model.moveSelection(by: 1)
+    #expect(model.selectedId == model.items[1].id)
+    model.moveSelection(by: 1)
+    #expect(model.selectedId == model.items[2].id)
+    model.moveSelection(by: 5)  // clamps
+    #expect(model.selectedId == model.items[2].id)
+    model.moveSelection(by: -10)  // clamps to top
+    #expect(model.selectedId == model.items[0].id)
+}
+
+@MainActor
+@Test func searchFiltersAndKeepsSelectionValid() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    try await store.insert(text("apple pie"))
+    try await store.insert(text("banana bread"))
+
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    model.query = "banana"
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.items.count == 1)
+    #expect(model.items.first?.content == "banana bread")
+    #expect(model.selectedId == model.items.first?.id)
+}
