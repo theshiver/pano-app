@@ -36,14 +36,19 @@ public final class PanelModel {
     }
 
     public func reload(selectTop: Bool = false) {
-        let query = query
+        // A trailing token matching a transform name selects that transform instead of filtering
+        // (docs/02-architecture.md), so strip it before searching.
+        let (searchText, transformToken) = Self.splitTransformToken(query)
         reloadTask?.cancel()
         reloadTask = Task {
-            let result = await fetch(query)
+            let result = await fetch(searchText)
             guard !Task.isCancelled else { return }
             items = result
             if selectTop || selectedId == nil || !items.contains(where: { $0.id == selectedId }) {
                 selectedId = items.first?.id
+            }
+            if let transformToken, availableTransforms.contains(where: { $0.id == transformToken }) {
+                activeTransformId = transformToken
             }
         }
     }
@@ -51,6 +56,18 @@ public final class PanelModel {
     private func fetch(_ query: String) async -> [ClipListItem] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         return (try? trimmed.isEmpty ? await store.recent() : await store.search(trimmed)) ?? []
+    }
+
+    private static let transformIds = Set(Transforms.all.map(\.id))
+
+    /// If the whole query is a transform name, it selects that transform for the current item
+    /// instead of searching (docs/02-architecture.md). Matching only the exact whole query keeps it
+    /// predictable; a looser "trailing token after other terms" rule would strip real searches like
+    /// "invoice json". Returns the effective search text and the transform id, if any.
+    static func splitTransformToken(_ query: String) -> (String, String?) {
+        let trimmed = query.trimmingCharacters(in: .whitespaces).lowercased()
+        if transformIds.contains(trimmed) { return ("", trimmed) }
+        return (query, nil)
     }
 
     // MARK: Transforms & selection

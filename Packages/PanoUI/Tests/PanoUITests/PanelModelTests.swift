@@ -109,3 +109,23 @@ private func text(_ s: String) -> ClipCapture {
     #expect(model.items.first?.content == "a")
     #expect(model.items.first?.isPinned == true)
 }
+
+@MainActor
+@Test func wholeQueryTransformNameSelectsTransform() async throws {
+    let (model, store, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    try await store.insert(
+        ClipCapture(
+            kind: .text, content: "#2A6DF0",
+            representations: [.init(uti: "public.utf8-plain-text", data: Data("#2A6DF0".utf8))]
+        )
+    )
+    model.activate()
+    try await Task.sleep(for: .milliseconds(50))
+    model.query = "colour"
+    try await Task.sleep(for: .milliseconds(50))
+    // Not filtered away, and the colour transform is auto-selected.
+    #expect(model.items.count == 1)
+    #expect(model.activeTransformId == "colour")
+}

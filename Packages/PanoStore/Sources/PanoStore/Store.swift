@@ -101,17 +101,22 @@ public actor Store {
         }
     }
 
-    /// Full-text search over content and OCR text.
-    ///
-    /// Results are ordered newest-first by **id** (first-seen), not `last_seen_at`. This lets FTS
-    /// pick the top `limit` rowids itself and join to `clip` for only those rows, instead of
-    /// sorting every match by an orthogonal column — the difference between ~17 ms and <2 ms at
-    /// 100k rows (see BenchmarkTests). A re-copied old item therefore keeps its place in *search*
-    /// results; the main history list (`recent`) still orders by `last_seen_at`. clip.id is a
-    /// monotonic rowid, so id DESC is a faithful first-seen recency order.
-    public func search(_ text: String, limit: Int = 200) throws -> [ClipListItem] {
-        let pattern = FTS5Pattern(matchingAllPrefixesIn: text)
-        guard let pattern else { return [] }
+    /// Structured search: bare words hit the FTS index; `app:`/`type:`/`pinned:`/`>7d`/`<2h`
+    /// become predicates (docs/02-architecture.md). Parsed to a `SearchQuery`, then SQL is built
+    /// with bound parameters. A terms-only query keeps the fast top-N-rowids path (<2ms at 100k).
+    public func search(_ raw: String, limit: Int = 200, now: Date = Date()) throws -> [ClipListItem] {
+        let query = SearchQuery(parsing: raw)
+        let trimmedTerms = query.terms.trimmingCharacters(in: .whitespaces)
+
+        if !query.hasFilters {
+            if trimmedTerms.isEmpty { return try recent(limit: limit) }
+            return try ftsOnly(trimmedTerms, limit: limit)
+        }
+        return try filtered(query, terms: trimmedTerms, limit: limit, now: now)
+    }
+
+    private func ftsOnly(_ terms: String, limit: Int) throws -> [ClipListItem] {
+        guard let pattern = FTS5Pattern(matchingAllPrefixesIn: terms) else { return [] }
         return try dbQueue.read { db in
             try ClipListItem.fetchAll(
                 db,
@@ -123,6 +128,51 @@ public actor Store {
                     ORDER BY clip.id DESC
                     """,
                 arguments: [pattern, limit]
+            )
+        }
+    }
+
+    private func filtered(_ query: SearchQuery, terms: String, limit: Int, now: Date) throws -> [ClipListItem] {
+        var wheres: [String] = []
+        var args: [DatabaseValueConvertible] = []
+
+        if !terms.isEmpty, let pattern = FTS5Pattern(matchingAllPrefixesIn: terms) {
+            wheres.append("clip.id IN (SELECT rowid FROM clip_fts WHERE clip_fts MATCH ?)")
+            args.append(pattern)
+        }
+        if let app = query.app {
+            wheres.append("(clip.source_bundle_id LIKE ? OR clip.source_name LIKE ?)")
+            args.append("%\(app)%")
+            args.append("%\(app)%")
+        }
+        if let kind = query.kind {
+            wheres.append("clip.kind = ?")
+            args.append(kind.rawValue)
+        }
+        if query.pinnedOnly {
+            wheres.append("clip.is_pinned = 1")
+        }
+        if let olderThan = query.olderThan {
+            wheres.append("clip.created_at < ?")
+            args.append(now.addingTimeInterval(-olderThan))
+        }
+        if let newerThan = query.newerThan {
+            wheres.append("clip.created_at > ?")
+            args.append(now.addingTimeInterval(-newerThan))
+        }
+
+        let clause = wheres.isEmpty ? "1" : wheres.joined(separator: " AND ")
+        args.append(limit)
+        return try dbQueue.read { db in
+            try ClipListItem.fetchAll(
+                db,
+                sql: """
+                    SELECT \(ClipListItem.columns) FROM clip
+                    WHERE \(clause)
+                    ORDER BY clip.is_pinned DESC, clip.last_seen_at DESC
+                    LIMIT ?
+                    """,
+                arguments: StatementArguments(args)
             )
         }
     }
