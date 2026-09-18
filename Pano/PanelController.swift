@@ -30,7 +30,7 @@ final class PanelController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.isMovableByWindowBackground = true  // borderless: drag anywhere that is not a control
+        panel.isMovable = true  // dragged via WindowDragGesture on the header, status bar and rail
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.animationBehavior = .none
     }

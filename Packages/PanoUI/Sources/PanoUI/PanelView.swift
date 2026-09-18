@@ -51,6 +51,7 @@ public struct PanelView: View {
             .frame(width: Theme.railWidth)
             .frame(maxHeight: .infinity)
             .background(.thinMaterial)
+            .gesture(WindowDragGesture())  // empty rail space drags the panel
     }
 
     private var searchRow: some View {

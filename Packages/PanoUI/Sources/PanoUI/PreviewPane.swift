@@ -44,6 +44,8 @@ struct PreviewPane: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .gesture(WindowDragGesture())  // header doubles as the panel's title-bar drag handle
     }
 
     private func chip(_ transform: any Transform) -> some View {

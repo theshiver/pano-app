@@ -21,6 +21,8 @@ struct StatusBar: View {
         .frame(height: Theme.statusHeight)
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
+        .contentShape(Rectangle())
+        .gesture(WindowDragGesture())  // borderless panel: the strip is a drag handle
         .accessibilityElement(children: .combine)
     }
 }
