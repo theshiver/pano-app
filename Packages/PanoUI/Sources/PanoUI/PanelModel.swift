@@ -1,4 +1,5 @@
 import Foundation
+import PanoCore
 import PanoStore
 import PanoTransforms
 
@@ -25,13 +26,32 @@ public final class PanelModel {
         didSet { if query != oldValue { reload() } }
     }
     public private(set) var selectedId: Int64? {
-        didSet { if selectedId != oldValue { activeTransformId = nil } }
+        didSet {
+            if selectedId != oldValue { activeTransformId = renderMarkdown && selectedIsMarkdown ? "markdown" : nil }
+        }
     }
     /// The transform whose chip is active in the preview, if any.
     public var activeTransformId: String?
-    /// Whether to syntax-highlight code and show the detected language (Settings).
-    public var highlightCode = true
-    public var syntaxTheme = "atom-one-dark"
+    /// The app's preferences; the preview's Highlight and Markdown chips toggle them in place so
+    /// nobody has to open Settings. nil in tests.
+    public var prefs: Preferences?
+    /// Whether to syntax-highlight code and show the detected language.
+    public var highlightCode: Bool {
+        get { prefs?.highlightCode ?? true }
+        set { prefs?.highlightCode = newValue }
+    }
+    public var syntaxTheme: String { prefs?.syntaxTheme ?? "atom-one-dark" }
+    /// OCR for images. The app hooks `onOCRChanged` so the capture engine follows the chip.
+    public var ocrEnabled: Bool {
+        get { prefs?.ocrEnabled ?? true }
+        set { prefs?.ocrEnabled = newValue }
+    }
+    public var onOCRChanged: ((Bool) -> Void)?
+    /// Whether a Markdown clip opens with the Markdown transform already active.
+    public var renderMarkdown: Bool {
+        get { prefs?.renderMarkdown ?? true }
+        set { prefs?.renderMarkdown = newValue }
+    }
     /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
     public var commandHeld: Bool = false
 
@@ -214,7 +234,22 @@ public final class PanelModel {
             "public.png", "public.tiff", "public.jpeg", "public.heic", "com.compuserve.gif",
         ]
         let payload = (try? await store.payload(of: id)) ?? []
-        return payload.first { imageUTIs.contains($0.uti) }?.data
+        let data = payload.first { imageUTIs.contains($0.uti) }?.data
+        if data != nil { fileClipsWithImage.insert(id) }
+        return data
+    }
+
+    /// File clips that turned out to carry image bytes (an image copied in Finder), learned when
+    /// the preview loads them; the OCR chip shows for these, not for every file.
+    public private(set) var fileClipsWithImage: Set<Int64> = []
+
+    public func hasImage(_ item: ClipListItem) -> Bool {
+        item.kind == .image || fileClipsWithImage.contains(item.id)
+    }
+
+    /// The stored representations of a clip (for the rich-text preview and drag-out).
+    public func payload(for id: Int64) async -> [(uti: String, data: Data)] {
+        (try? await store.payload(of: id)) ?? []
     }
 
     public var activeTransform: (any Transform)? {
@@ -228,6 +263,34 @@ public final class PanelModel {
 
     public func toggleTransform(_ id: String) {
         activeTransformId = (activeTransformId == id) ? nil : id
+        // On a Markdown clip the chip doubles as the "render Markdown by default" preference.
+        if id == "markdown", selectedIsMarkdown { renderMarkdown = activeTransformId == "markdown" }
+    }
+
+    public func toggleHighlight() {
+        highlightCode.toggle()
+    }
+
+    /// The OCR chip: flips the preference, tells the engine, and — when turned on over an image
+    /// that was captured while OCR was off — recognises that image right away.
+    public func toggleOCR() {
+        ocrEnabled.toggle()
+        onOCRChanged?(ocrEnabled)
+        guard ocrEnabled, let item = selectedItem, item.ocrText == nil else { return }
+        let id = item.id
+        Task {
+            let payload = await payload(for: id)
+            guard let image = payload.first(where: { PasteboardUTIs.imageUTIs.contains($0.uti) })?.data,
+                let text = await OCRService.recognizeText(in: image)
+            else { return }
+            try? await store.setOCRText(text, id: id)
+            reload()
+        }
+    }
+
+    public var selectedIsMarkdown: Bool {
+        guard let item = selectedItem, item.kind == .code, let content = item.content else { return false }
+        return CodeHighlighter.detectLanguage(String(content.prefix(4000))) == .markdown
     }
 
     /// Pastes an arbitrary string (a transformed value or a colour format row) as plain text.

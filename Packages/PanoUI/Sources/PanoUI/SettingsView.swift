@@ -82,6 +82,8 @@ public struct SettingsView: View {
                         }
                     }
                 }
+                Toggle("Render Markdown", isOn: $prefs.renderMarkdown)
+                note("Markdown clips open formatted; ⇧⏎ still pastes the raw text.")
                 Toggle("Read text in images", isOn: toggle(\.ocrEnabled, onOCRChanged))
                 note("Makes screenshots searchable. Uses macOS Vision on your Mac; nothing leaves it.")
             }

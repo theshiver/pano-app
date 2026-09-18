@@ -26,6 +26,7 @@ public final class Preferences {
     public var ocrEnabled: Bool { didSet { defaults.set(ocrEnabled, forKey: Key.ocrEnabled) } }
     public var maskSecrets: Bool { didSet { defaults.set(maskSecrets, forKey: Key.maskSecrets) } }
     public var highlightCode: Bool { didSet { defaults.set(highlightCode, forKey: Key.highlightCode) } }
+    public var renderMarkdown: Bool { didSet { defaults.set(renderMarkdown, forKey: Key.renderMarkdown) } }
     public var syntaxTheme: String { didSet { defaults.set(syntaxTheme, forKey: Key.syntaxTheme) } }
 
     /// Global hotkey: a virtual key code and Carbon modifier mask, plus a display string like "⌘⇧V".
@@ -43,6 +44,7 @@ public final class Preferences {
         ocrEnabled = defaults.object(forKey: Key.ocrEnabled) as? Bool ?? true
         maskSecrets = defaults.object(forKey: Key.maskSecrets) as? Bool ?? false
         highlightCode = defaults.object(forKey: Key.highlightCode) as? Bool ?? true
+        renderMarkdown = defaults.object(forKey: Key.renderMarkdown) as? Bool ?? true
         syntaxTheme = defaults.string(forKey: Key.syntaxTheme) ?? "atom-one-dark"
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)
         hotKeyModifiers = UInt32(defaults.object(forKey: Key.hotKeyModifiers) as? Int ?? (cmdKey | shiftKey))
@@ -74,6 +76,7 @@ public final class Preferences {
         static let launchAtLogin = "launchAtLogin"
         static let ocrEnabled = "ocrEnabled"
         static let maskSecrets = "maskSecrets"
+        static let renderMarkdown = "renderMarkdown"
         static let highlightCode = "highlightCode"
         static let syntaxTheme = "syntaxTheme"
         static let hotKeyCode = "hotKeyCode"

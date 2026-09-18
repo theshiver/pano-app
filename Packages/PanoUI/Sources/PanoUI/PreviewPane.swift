@@ -9,6 +9,8 @@ struct PreviewPane: View {
     @Environment(\.colorScheme) private var scheme
     /// The last highlight result and the clip/theme it belongs to; computed off the main actor.
     @State private var highlighted: (id: Int64, theme: String, result: CodeText.Result)?
+    /// A rich-text clip rendered from its own RTF/HTML, loaded off the row's plain text.
+    @State private var rich: (id: Int64, text: AttributedString)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -38,8 +40,19 @@ struct PreviewPane: View {
             .font(Theme.rowMeta)
             .foregroundStyle(Theme.secondary(scheme))
             Spacer()
+            if item.kind == .code {
+                chip("Highlight", active: model.highlightCode, label: "Syntax highlighting") { model.toggleHighlight() }
+            }
+            if model.hasImage(item) {
+                chip("OCR", active: model.ocrEnabled, label: "Read text in images") { model.toggleOCR() }
+            }
             ForEach(model.availableTransforms, id: \.id) { transform in
-                chip(transform)
+                chip(
+                    transform.title, active: model.activeTransformId == transform.id,
+                    label: "\(transform.title) transform"
+                ) {
+                    model.toggleTransform(transform.id)
+                }
             }
         }
         .padding(.horizontal, 12)
@@ -58,12 +71,9 @@ struct PreviewPane: View {
         return item.kind == .richtext ? "rich text" : item.kind.rawValue
     }
 
-    private func chip(_ transform: any Transform) -> some View {
-        let active = model.activeTransformId == transform.id
-        return Button {
-            model.toggleTransform(transform.id)
-        } label: {
-            Text(transform.title)
+    private func chip(_ title: String, active: Bool, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
                 .font(Theme.chipFont)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
@@ -78,7 +88,7 @@ struct PreviewPane: View {
                 .foregroundStyle(active ? Color.white : Theme.secondary(scheme))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(transform.title) transform")
+        .accessibilityLabel(label)
         .accessibilityAddTraits(active ? [.isSelected] : [])
     }
 
@@ -103,6 +113,8 @@ struct PreviewPane: View {
                         } else if let html = model.transformOutput?.html, let rich = RichPreview.attributed(html: html)
                         {
                             Text(rich)
+                        } else if item.kind == .richtext, model.activeTransform == nil, rich?.id == item.id, let rich {
+                            Text(rich.text)
                         } else {
                             Text(preview.text)
                                 .font(Theme.previewBody)
@@ -122,6 +134,11 @@ struct PreviewPane: View {
             .transition(.opacity)
             .id(model.activeTransformId ?? "raw")
             .animation(.easeInOut(duration: 0.09), value: model.activeTransformId)
+            .task(id: "rich-\(item.id)") {
+                guard item.kind == .richtext else { return }
+                let payload = await model.payload(for: item.id)
+                if let text = RichPreview.attributed(payload: payload), !Task.isCancelled { rich = (item.id, text) }
+            }
             .task(id: "\(item.id)-\(model.syntaxTheme)-\(wantsCode)") {
                 guard wantsCode, let content = item.content else { return }
                 let (text, _) = CodeText.preview(content)
@@ -232,7 +249,7 @@ private struct ImagePreview: View {
             }
             .padding(12)
 
-            if imageData != nil, let ocr = item.ocrText ?? item.content, !ocr.isEmpty {
+            if imageData != nil, model.ocrEnabled, let ocr = item.ocrText ?? item.content, !ocr.isEmpty {
                 Divider()
                 ScrollView {
                     Text(ocr)

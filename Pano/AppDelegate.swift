@@ -80,8 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         let model = PanelModel(store: store, actions: actions)
-        model.highlightCode = prefs.highlightCode
-        model.syntaxTheme = prefs.syntaxTheme
+        model.prefs = prefs
+        model.onOCRChanged = { [weak self] enabled in Task { await self?.engine?.setOCREnabled(enabled) } }
         self.model = model
         panel.setContent(PanelView(model: model), model: model)
 
@@ -103,14 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onMaskSecretsChanged: { [weak self] enabled in
                 Task { await self?.engine?.setMaskSecrets(enabled) }
             },
-            onHighlightChanged: { [weak self] enabled in
-                self?.model?.highlightCode = enabled
-                self?.model?.reload()
-            },
-            onThemeChanged: { [weak self] theme in
-                self?.model?.syntaxTheme = theme
-                self?.model?.reload()
-            }
+            onHighlightChanged: { [weak self] _ in self?.model?.reload() },
+            onThemeChanged: { [weak self] _ in self?.model?.reload() }
         )
     }
 
