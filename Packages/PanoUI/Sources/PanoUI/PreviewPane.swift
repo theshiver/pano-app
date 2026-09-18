@@ -81,6 +81,8 @@ struct PreviewPane: View {
                 Group {
                     if let code {
                         Text(code.text)
+                    } else if let html = model.transformOutput?.html, let rich = RichPreview.attributed(html: html) {
+                        Text(rich)
                     } else {
                         Text(model.transformOutput?.text ?? item.content ?? "—")
                             .font(Theme.previewBody)

@@ -6,13 +6,14 @@ import Foundation
 public struct PanelActions: Sendable {
     /// Paste the clip. `plainText` strips formatting by writing only the plain-text representation.
     public var paste: @Sendable (_ id: Int64, _ plainText: Bool) -> Void
-    /// Pastes a literal string as plain text (transformed values, colour formats).
-    public var pasteText: @Sendable (_ text: String) -> Void
+    /// Pastes a literal string (transformed values, colour formats). With `html`, the rich
+    /// representation is written alongside so Mail/Notes/Slack keep the formatting.
+    public var pasteText: @Sendable (_ text: String, _ html: String?) -> Void
     public var close: @Sendable () -> Void
 
     public init(
         paste: @escaping @Sendable (_ id: Int64, _ plainText: Bool) -> Void,
-        pasteText: @escaping @Sendable (_ text: String) -> Void,
+        pasteText: @escaping @Sendable (_ text: String, _ html: String?) -> Void,
         close: @escaping @Sendable () -> Void
     ) {
         self.paste = paste

@@ -10,14 +10,17 @@ public protocol Transform: Sendable {
 }
 
 /// Most transforms return a single `text`. Colour also returns a list of named `formats`, each
-/// selectable and pasteable on its own (docs/05-design.md).
+/// selectable and pasteable on its own (docs/05-design.md). Markdown adds `html`: the preview renders
+/// it and ⏎ pastes it as rich text with `text` as the plain fallback.
 public struct TransformOutput: Sendable, Equatable {
     public var text: String
     public var formats: [Format]
+    public var html: String?
 
-    public init(_ text: String, formats: [Format] = []) {
+    public init(_ text: String, formats: [Format] = [], html: String? = nil) {
         self.text = text
         self.formats = formats
+        self.html = html
     }
 
     public struct Format: Sendable, Equatable, Identifiable {

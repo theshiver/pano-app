@@ -111,7 +111,7 @@ public final class PanelModel {
 
     /// Pastes an arbitrary string (a transformed value or a colour format row) as plain text.
     public func pasteText(_ text: String) {
-        actions.pasteText(text)
+        actions.pasteText(text, nil)
     }
 
     // MARK: Keyboard
@@ -130,9 +130,9 @@ public final class PanelModel {
     public func pasteSelected(plainText: Bool = false) {
         guard let selectedId, let item = selectedItem else { return }
         if !plainText, let output = transformOutput {
-            actions.pasteText(output.text)  // ⏎ with a transform active pastes the transformed value
+            actions.pasteText(output.text, output.html)  // ⏎ with a transform active pastes the transformed value
         } else if plainText, let ocr = item.ocrText, !ocr.isEmpty {
-            actions.pasteText(ocr)  // ⇧⏎ on an OCR'd image pastes the recognised text
+            actions.pasteText(ocr, nil)  // ⇧⏎ on an OCR'd image pastes the recognised text
         } else {
             actions.paste(selectedId, plainText)  // ⏎ pastes the item; ⇧⏎ pastes it plain
         }

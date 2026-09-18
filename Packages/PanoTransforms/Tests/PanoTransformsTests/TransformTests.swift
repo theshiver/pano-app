@@ -105,11 +105,16 @@ import Testing
     #expect(try colour.apply("#000").formats.contains(.init("Tailwind", "black")))
 }
 
-@Test func markdownStripsToPlainText() throws {
+@Test func markdownRendersHTMLWithPlainFallback() throws {
     let md = MarkdownTransform()
-    let input = "# Title\n\nSome **bold** and `code` with a [link](https://x.y).\n\n- one\n- two\n"
+    let input = "# Title\n\nSome **bold** and `code` with a [link](https://x.y).\n\n- one\n- two\n\n1. first\n"
     #expect(md.applies(to: input))
-    #expect(try md.apply(input).text == "Title\nSome bold and code with a link.\none\ntwo")
+    let out = try md.apply(input)
+    #expect(out.text == "Title\n\nSome bold and code with a link.\n\none\ntwo\n\nfirst")
+    #expect(
+        out.html
+            == "<h1>Title</h1><p>Some <strong>bold</strong> and <code>code</code> with a "
+            + "<a href=\"https://x.y\">link</a>.</p><ul><li><p>one</p><li><p>two</p></ul><ol><li><p>first</p></ol>")
     #expect(!md.applies(to: "plain sentence, nothing to strip"))
     #expect(!md.applies(to: "a * b"))
 }
