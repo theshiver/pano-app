@@ -23,6 +23,8 @@ public final class Preferences {
     public var retentionImageDays: Int { didSet { defaults.set(retentionImageDays, forKey: Key.retentionImageDays) } }
     public var retentionOtherDays: Int { didSet { defaults.set(retentionOtherDays, forKey: Key.retentionOtherDays) } }
     public var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Key.launchAtLogin) } }
+    /// OCR is off by default: the first Vision call loads heavy models and burns CPU. Opt-in.
+    public var ocrEnabled: Bool { didSet { defaults.set(ocrEnabled, forKey: Key.ocrEnabled) } }
 
     /// Global hotkey: a virtual key code and Carbon modifier mask, plus a display string like "⌘⇧V".
     public var hotKeyCode: UInt32 { didSet { defaults.set(Int(hotKeyCode), forKey: Key.hotKeyCode) } }
@@ -36,6 +38,7 @@ public final class Preferences {
         retentionImageDays = defaults.object(forKey: Key.retentionImageDays) as? Int ?? 7
         retentionOtherDays = defaults.object(forKey: Key.retentionOtherDays) as? Int ?? 30
         launchAtLogin = defaults.bool(forKey: Key.launchAtLogin)
+        ocrEnabled = defaults.bool(forKey: Key.ocrEnabled)
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)
         hotKeyModifiers = UInt32(defaults.object(forKey: Key.hotKeyModifiers) as? Int ?? (cmdKey | shiftKey))
         hotKeyDisplay = defaults.string(forKey: Key.hotKeyDisplay) ?? "⌘⇧V"
@@ -55,6 +58,7 @@ public final class Preferences {
         static let retentionImageDays = "retentionImageDays"
         static let retentionOtherDays = "retentionOtherDays"
         static let launchAtLogin = "launchAtLogin"
+        static let ocrEnabled = "ocrEnabled"
         static let hotKeyCode = "hotKeyCode"
         static let hotKeyModifiers = "hotKeyModifiers"
         static let hotKeyDisplay = "hotKeyDisplay"

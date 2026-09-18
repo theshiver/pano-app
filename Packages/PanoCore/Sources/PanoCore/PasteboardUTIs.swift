@@ -7,6 +7,12 @@ public enum PasteboardUTIs {
     public static let whitelist: Set<String> = [
         "public.file-url", "public.html", "public.png", "public.rtf",
         "public.utf8-plain-text", "public.tiff",
+        "public.jpeg", "public.heic", "com.compuserve.gif",
+    ]
+
+    /// The image representations Pano understands, for classification and preview.
+    public static let imageUTIs: Set<String> = [
+        "public.png", "public.tiff", "public.jpeg", "public.heic", "com.compuserve.gif",
     ]
 
     /// Presence of any of these means "never record this copy" (password managers, transient UI).

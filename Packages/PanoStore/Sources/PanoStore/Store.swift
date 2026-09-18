@@ -230,6 +230,17 @@ public actor Store {
         }
     }
 
+    /// Writes OCR text for an image clip: sets `ocr_text` and fills `content` if it was empty, so the
+    /// row shows the text and both FTS columns index it (the AFTER UPDATE trigger re-indexes).
+    public func setOCRText(_ text: String, id: Int64) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(
+                sql: "UPDATE clip SET ocr_text = ?, content = COALESCE(content, ?) WHERE id = ?",
+                arguments: [text, text, id]
+            )
+        }
+    }
+
     /// Clears the history: deletes every unpinned clip and its blob files, leaving pinned items.
     /// Returns the number of clips removed.
     @discardableResult
@@ -311,13 +322,21 @@ public actor Store {
 
     // MARK: Hashing
 
-    /// SHA-256 over the text form when present, otherwise the first representation's bytes.
+    /// SHA-256 identity for dedup. For text-like clips it hashes the text form. For files and images
+    /// it hashes the first representation (the file URL or the image bytes) instead of the filename —
+    /// otherwise two different files with the same name collide, and re-copying a file whose first
+    /// capture lacked the image would keep returning the text-only row.
     static func canonicalHash(_ capture: ClipCapture) -> String {
         let bytes: Data
-        if let content = capture.content, let utf8 = content.data(using: .utf8) {
-            bytes = utf8
-        } else {
-            bytes = capture.representations.first?.data ?? Data()
+        switch capture.kind {
+        case .image, .file:
+            bytes = capture.representations.first?.data ?? Data(capture.content?.utf8 ?? "".utf8)
+        default:
+            if let content = capture.content, let utf8 = content.data(using: .utf8) {
+                bytes = utf8
+            } else {
+                bytes = capture.representations.first?.data ?? Data()
+            }
         }
         return SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     }

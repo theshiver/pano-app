@@ -71,6 +71,8 @@ struct PreviewPane: View {
     @ViewBuilder private func body(for item: ClipListItem) -> some View {
         if item.isMasked {
             centeredNote("Not stored — this looked like a secret.")
+        } else if item.kind == .image || item.kind == .file {
+            ImagePreview(item: item, model: model)
         } else if let output = model.transformOutput, !output.formats.isEmpty {
             colourFormats(output.formats)
         } else {
@@ -126,17 +128,75 @@ struct PreviewPane: View {
 
     private var footer: some View {
         HStack {
-            Text(
-                model.activeTransform == nil
-                    ? "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete"
-                    : "⏎ paste transformed · ⇧⏎ raw · ⌘P pin"
-            )
-            .font(Theme.chipFont)
-            .foregroundStyle(Theme.secondary(scheme))
+            Text(hint)
+                .font(Theme.chipFont)
+                .foregroundStyle(Theme.secondary(scheme))
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+    }
+
+    private var hint: String {
+        let item = model.selectedItem
+        if item?.kind == .image, let ocr = item?.content, !ocr.isEmpty {
+            return "⏎ paste image · ⇧⏎ paste text · ⌘P pin"
+        }
+        if model.activeTransform != nil {
+            return "⏎ paste transformed · ⇧⏎ raw · ⌘P pin"
+        }
+        return "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete"
+    }
+}
+
+/// Shows the actual image immediately (loaded async from the store); any OCR text runs in the
+/// background and appears underneath for reference, without replacing the visual preview.
+private struct ImagePreview: View {
+    let item: ClipListItem
+    let model: PanelModel
+    @State private var imageData: Data?
+    @State private var loaded = false
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                if let imageData, let nsImage = NSImage(data: imageData) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel("Copied image")
+                } else if loaded {
+                    // A file with no image preview: show its name/path instead of a spinner.
+                    Text(item.content ?? "File")
+                        .font(Theme.previewBody)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+                }
+            }
+            .padding(12)
+
+            if imageData != nil, let ocr = item.content, !ocr.isEmpty {
+                Divider()
+                ScrollView {
+                    Text(ocr)
+                        .font(Theme.rowMeta)
+                        .foregroundStyle(Theme.secondary(scheme))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                }
+                .frame(maxHeight: 140)
+            }
+        }
+        .task(id: item.id) {
+            loaded = false
+            imageData = await model.imageData(for: item.id)
+            loaded = true
+        }
     }
 }
 

@@ -77,8 +77,20 @@ public final class PanelModel {
     }
 
     public var availableTransforms: [any Transform] {
-        guard let content = selectedItem?.content, !content.isEmpty else { return [] }
+        guard let item = selectedItem, item.kind != .image, item.kind != .file,
+            let content = item.content, !content.isEmpty
+        else { return [] }
         return Transforms.applicable(to: content)
+    }
+
+    /// Loads the image bytes of a clip for the preview (png or tiff). Async because the payload may
+    /// live in a blob file, not the row.
+    public func imageData(for id: Int64) async -> Data? {
+        let imageUTIs: Set<String> = [
+            "public.png", "public.tiff", "public.jpeg", "public.heic", "com.compuserve.gif",
+        ]
+        let payload = (try? await store.payload(of: id)) ?? []
+        return payload.first { imageUTIs.contains($0.uti) }?.data
     }
 
     public var activeTransform: (any Transform)? {
@@ -113,11 +125,13 @@ public final class PanelModel {
     }
 
     public func pasteSelected(plainText: Bool = false) {
-        guard let selectedId else { return }
+        guard let selectedId, let item = selectedItem else { return }
         if !plainText, let output = transformOutput {
             actions.pasteText(output.text)  // ⏎ with a transform active pastes the transformed value
+        } else if plainText, item.kind == .image, let ocr = item.content, !ocr.isEmpty {
+            actions.pasteText(ocr)  // ⇧⏎ on an OCR'd image pastes the recognised text
         } else {
-            actions.paste(selectedId, plainText)  // ⇧⏎ (or no transform) pastes the stored item
+            actions.paste(selectedId, plainText)  // ⏎ pastes the item; ⇧⏎ pastes it plain
         }
     }
 

@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.engine = engine
         Task {
             await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? [])
+            await engine.setOCREnabled(prefs.ocrEnabled)
             await engine.start()
         }
 
@@ -84,7 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings = SettingsController(
             prefs: prefs, store: store,
             onHotKeyChanged: { [weak self] in self?.installHotKey() },
-            onExclusionsChanged: { [weak self] in self?.reloadExclusions() }
+            onExclusionsChanged: { [weak self] in self?.reloadExclusions() },
+            onOCRChanged: { [weak self] enabled in
+                Task { await self?.engine?.setOCREnabled(enabled) }
+            }
         )
     }
 
@@ -183,18 +187,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Opening the panel first runs one capture tick so the item the user just copied is present
-    /// even if the 0.5 s poll has not fired yet, then reloads and shows.
+    /// Shows the panel immediately with the current history, then runs one capture tick so the
+    /// just-copied item shows up even if the 0.5 s poll has not fired yet. The tick can be slow
+    /// (decoding a copied image file), so it must not block the panel from appearing.
     private func toggle() {
         guard let panel else { return }
         if panel.isVisible {
             panel.hide()
             return
         }
+        model?.activate()
+        panel.show()
         Task { @MainActor in
-            await engine?.tick()
-            model?.activate()
-            panel.show()
+            if await engine?.tick() != nil { model?.reload() }
         }
     }
 

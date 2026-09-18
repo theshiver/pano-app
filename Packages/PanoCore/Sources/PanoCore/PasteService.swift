@@ -24,20 +24,29 @@ public enum PasteService {
         return AXIsProcessTrusted()
     }
 
-    /// Non-file representations go on the first item; each file URL becomes its own item so that
-    /// multiple copied files paste correctly (docs/03-data-model.md).
+    /// Writes every representation as explicit `NSPasteboardItem`s: the non-file types on one item,
+    /// each file URL as its own item so multiple files paste correctly (docs/03-data-model.md).
+    /// Explicit items avoid mixing `setData` on the general pasteboard with `writeObjects`, which
+    /// dropped the file URL and broke file paste-back.
     static func write(_ payload: [(uti: String, data: Data)]) {
         let pb = NSPasteboard.general
         pb.clearContents()
-        for (uti, data) in payload where uti != "public.file-url" {
-            pb.setData(data, forType: NSPasteboard.PasteboardType(uti))
+
+        var items: [NSPasteboardItem] = []
+        let nonFile = payload.filter { $0.uti != "public.file-url" }
+        if !nonFile.isEmpty {
+            let item = NSPasteboardItem()
+            for (uti, data) in nonFile {
+                item.setData(data, forType: NSPasteboard.PasteboardType(uti))
+            }
+            items.append(item)
         }
-        let fileItems = payload.filter { $0.uti == "public.file-url" }.map { entry -> NSPasteboardItem in
+        for entry in payload where entry.uti == "public.file-url" {
             let item = NSPasteboardItem()
             item.setData(entry.data, forType: NSPasteboard.PasteboardType("public.file-url"))
-            return item
+            items.append(item)
         }
-        if !fileItems.isEmpty { pb.writeObjects(fileItems) }
+        if !items.isEmpty { pb.writeObjects(items) }
     }
 
     /// Posts a harmless synthetic event (a mouse-move to the current location) so macOS raises the

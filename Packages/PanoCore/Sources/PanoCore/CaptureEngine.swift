@@ -12,6 +12,7 @@ public actor CaptureEngine {
     private var lastChangeCount: Int
     private var task: Task<Void, Never>?
     private var paused = false
+    private var ocrEnabled = false
 
     public init(
         store: Store,
@@ -36,6 +37,12 @@ public actor CaptureEngine {
     }
 
     public var isPaused: Bool { paused }
+
+    /// OCR runs only when enabled (Settings; off by default because the first Vision request is
+    /// expensive). Toggling it does not re-scan existing clips.
+    public func setOCREnabled(_ value: Bool) {
+        ocrEnabled = value
+    }
 
     public func start() {
         guard task == nil else { return }
@@ -65,7 +72,22 @@ public actor CaptureEngine {
         guard let input = Self.read(pb) else { return nil }
         if let bundle = input.sourceBundleId, excludedBundleIds.contains(bundle) { return nil }
         guard let capture = CaptureBuilder.build(input) else { return nil }
-        return try? await store.insert(capture)
+        guard let id = try? await store.insert(capture) else { return nil }
+        scheduleOCR(for: capture, id: id)
+        return id
+    }
+
+    /// Kicks OCR onto a detached task for image clips and writes the recognised text back through
+    /// the store, so screenshots become searchable without blocking the capture loop.
+    private func scheduleOCR(for capture: ClipCapture, id: Int64) {
+        guard ocrEnabled, capture.kind == .image else { return }
+        let imageData = capture.representations.first { PasteboardUTIs.imageUTIs.contains($0.uti) }?.data
+        guard let imageData else { return }
+        let store = store
+        Task.detached(priority: .utility) {
+            guard let text = await OCRService.recognizeText(in: imageData) else { return }
+            try? await store.setOCRText(text, id: id)
+        }
     }
 
     /// Reads the current pasteboard into a plain value. Flattens every item's representations into
@@ -84,6 +106,17 @@ public actor CaptureEngine {
                 }
             }
         }
+        // A Finder file copy carries only a file URL, the name and an icon — no bitmap. If the file
+        // is an image, read it through the pasteboard's security-scoped URL (a plain URL from the
+        // file-url bytes is not sandbox-accessible) and add a PNG so it previews and pastes as an
+        // image, not just as a file.
+        if data.keys.allSatisfy({ !PasteboardUTIs.imageUTIs.contains($0) }),
+            let (uti, bytes) = Self.imageBytesFromFileURLs(on: pb)
+        {
+            utis.append(uti)
+            data[uti] = bytes
+        }
+
         guard !utis.isEmpty else { return nil }
 
         let app = NSWorkspace.shared.frontmostApplication
@@ -91,5 +124,39 @@ public actor CaptureEngine {
             utis: utis, data: data,
             sourceBundleId: app?.bundleIdentifier, sourceName: app?.localizedName
         )
+    }
+
+    private static let imageExtensions: Set<String> = [
+        "jpg", "jpeg", "png", "gif", "heic", "heif", "tiff", "tif", "bmp", "webp",
+    ]
+
+    private static func isImageFile(_ url: URL) -> Bool {
+        imageExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// Reads the raw bytes of the first image file among the pasteboard's file URLs, through the
+    /// security-scoped resource so the sandbox grants access. No decode/re-encode — a large JPG is
+    /// stored as-is (fast, small), and only decoded lazily by the preview when it is selected.
+    private static func imageBytesFromFileURLs(on pb: NSPasteboard) -> (uti: String, data: Data)? {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        guard let urls = pb.readObjects(forClasses: [NSURL.self], options: options) as? [URL],
+            let url = urls.first(where: isImageFile),
+            let uti = imageUTI(for: url)
+        else { return nil }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let bytes = try? Data(contentsOf: url) else { return nil }
+        return (uti, bytes)
+    }
+
+    private static func imageUTI(for url: URL) -> String? {
+        switch url.pathExtension.lowercased() {
+        case "jpg", "jpeg": return "public.jpeg"
+        case "png": return "public.png"
+        case "gif": return "com.compuserve.gif"
+        case "heic", "heif": return "public.heic"
+        case "tiff", "tif": return "public.tiff"
+        default: return nil  // bmp/webp: skip until they earn a UTI mapping
+        }
     }
 }

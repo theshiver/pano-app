@@ -9,19 +9,22 @@ public struct SettingsView: View {
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
     private let onHotKeyChanged: () -> Void
+    private let onOCRChanged: (Bool) -> Void
 
     public init(
         prefs: Preferences,
         exclusion: ExclusionModel,
         onRetentionChanged: @escaping () -> Void,
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
-        onHotKeyChanged: @escaping () -> Void
+        onHotKeyChanged: @escaping () -> Void,
+        onOCRChanged: @escaping (Bool) -> Void
     ) {
         self.prefs = prefs
         self.exclusion = exclusion
         self.onRetentionChanged = onRetentionChanged
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
         self.onHotKeyChanged = onHotKeyChanged
+        self.onOCRChanged = onOCRChanged
     }
 
     public var body: some View {
@@ -33,6 +36,15 @@ public struct SettingsView: View {
                         get: { prefs.launchAtLogin },
                         set: {
                             prefs.launchAtLogin = $0; onLaunchAtLoginChanged($0)
+                        }
+                    )
+                )
+                Toggle(
+                    "Read text in images (OCR)",
+                    isOn: Binding(
+                        get: { prefs.ocrEnabled },
+                        set: {
+                            prefs.ocrEnabled = $0; onOCRChanged($0)
                         }
                     )
                 )

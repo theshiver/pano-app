@@ -205,3 +205,22 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     try await store.removeExcludedApp(bundleId: "com.apple.Terminal")
     #expect(try await store.excludedBundleIds() == ["com.1password.1password"])
 }
+
+@Test func ocrTextMakesImageSearchable() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let png = Data("fake-png".utf8)
+    let id = try await store.insert(
+        ClipCapture(kind: .image, content: nil, representations: [.init(uti: "public.png", data: png)])
+    )
+    // Before OCR, no text; not found.
+    #expect(try await store.search("invoice").isEmpty)
+
+    try await store.setOCRText("Invoice total 4242 TL", id: id)
+    let hits = try await store.search("invoice")
+    #expect(hits.count == 1)
+    #expect(hits[0].id == id)
+    #expect(hits[0].content == "Invoice total 4242 TL")  // content filled for the row
+    #expect(try await store.search("type:image 4242").count == 1)
+}

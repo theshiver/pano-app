@@ -10,7 +10,7 @@ public enum ClipClassifier {
         if let trimmed, isColour(trimmed) { return .colour }
         if let trimmed, isURL(trimmed) { return .url }
         if utis.contains(PasteboardUTIs.fileURL) { return .file }
-        if utis.contains(PasteboardUTIs.png) || utis.contains(PasteboardUTIs.tiff) { return .image }
+        if !utis.isDisjoint(with: PasteboardUTIs.imageUTIs) { return .image }
         if utis.contains(PasteboardUTIs.rtf) || utis.contains(PasteboardUTIs.html) { return .richtext }
         return .text
     }
