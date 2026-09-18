@@ -52,6 +52,7 @@ struct AppRail: View {
         }
         .buttonStyle(.plain)
         .focusable(false)  // the search field owns keyboard focus; rail buttons must never take it
+        .pointer()
         .help(label)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

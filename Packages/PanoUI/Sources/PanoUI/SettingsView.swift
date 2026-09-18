@@ -44,6 +44,7 @@ public struct SettingsView: View {
             general.tabItem { Label("General", systemImage: "gearshape") }
             history.tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
             privacy.tabItem { Label("Privacy", systemImage: "hand.raised") }
+            about.tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 460, height: 400)
     }
@@ -71,9 +72,6 @@ public struct SettingsView: View {
                 if !prefs.showMenuBarIcon {
                     note("Settings stay reachable from the ⚙︎ in the panel's status bar; quit with ⌘Q from this window.")
                 }
-            }
-            Section {
-                LabeledContent("Version", value: Preferences.versionString)
             }
             Section("Content") {
                 Toggle("Highlight code", isOn: toggle(\.highlightCode, onHighlightChanged))
@@ -167,6 +165,38 @@ public struct SettingsView: View {
         }
         .formStyle(.grouped)
     }
+
+    // MARK: About
+
+    private var about: some View {
+        Form {
+            Section {
+                HStack(spacing: 12) {
+                    Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
+                    VStack(alignment: .leading) {
+                        Text("Pano").font(.title2.bold())
+                        Text("Clipboard manager for macOS").foregroundStyle(.secondary)
+                    }
+                }
+                LabeledContent("Version", value: Preferences.versionString)
+                LabeledContent("Developer", value: "Can Çetin")
+                LabeledContent("Licence", value: "MIT, open source")
+                LabeledContent("Source") {
+                    Link("github.com/theshiver/pano-app", destination: Self.sourceURL)
+                }
+                LabeledContent("Website") {
+                    Link("pano-app.com", destination: Self.websiteURL)
+                }
+            }
+            Section {
+                note("Everything stays on this Mac. No account, no sync, no analytics, no network access at all.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private static let sourceURL = URL(string: "https://github.com/theshiver/pano-app") ?? URL(fileURLWithPath: "/")
+    private static let websiteURL = URL(string: "https://pano-app.com") ?? URL(fileURLWithPath: "/")
 
     // MARK: Helpers
 

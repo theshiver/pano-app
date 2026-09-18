@@ -29,6 +29,7 @@ struct PinboardRail: View {
             }
             .buttonStyle(.plain)
             .focusable(false)  // the search field owns keyboard focus; rail buttons must never take it
+            .pointer()
             .help("New pinboard")
             .accessibilityLabel("New pinboard")
             .popover(isPresented: $creating) {
@@ -62,6 +63,7 @@ struct PinboardRail: View {
         }
         .buttonStyle(.plain)
         .focusable(false)  // the search field owns keyboard focus; rail buttons must never take it
+        .pointer()
         .help(board.name)
         .accessibilityLabel("Pinboard \(board.name)")
         .accessibilityAddTraits(selected ? [.isSelected] : [])

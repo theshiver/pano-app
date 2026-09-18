@@ -23,6 +23,7 @@ struct StatusBar: View {
             }
             .buttonStyle(.plain)
             .focusable(false)
+            .pointer()
             .help("Settings")
             .accessibilityLabel("Settings")
         }

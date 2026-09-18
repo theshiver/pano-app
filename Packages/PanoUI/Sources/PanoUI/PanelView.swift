@@ -156,6 +156,7 @@ public struct PanelView: View {
                         .id(item.id)
                         .draggable(ClipDrag(item))
                         .onTapGesture { click(item.id) }
+                        .pointer()
                     }
                 }
                 .padding(6)

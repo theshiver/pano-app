@@ -88,6 +88,8 @@ struct PreviewPane: View {
                 .foregroundStyle(active ? Color.white : Theme.secondary(scheme))
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .pointer()
         .accessibilityLabel(label)
         .accessibilityAddTraits(active ? [.isSelected] : [])
     }
@@ -179,6 +181,7 @@ struct PreviewPane: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .pointer()
                 .accessibilityLabel("Paste \(format.label) \(format.value)")
             }
         }
