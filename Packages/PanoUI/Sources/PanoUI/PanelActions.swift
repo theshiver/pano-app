@@ -10,14 +10,18 @@ public struct PanelActions: Sendable {
     /// representation is written alongside so Mail/Notes/Slack keep the formatting.
     public var pasteText: @Sendable (_ text: String, _ html: String?) -> Void
     public var close: @Sendable () -> Void
+    /// Opens the Settings window (the panel's ⚙︎; the only route when the menu-bar icon is hidden).
+    public var openSettings: @Sendable () -> Void
 
     public init(
         paste: @escaping @Sendable (_ id: Int64, _ plainText: Bool) -> Void,
         pasteText: @escaping @Sendable (_ text: String, _ html: String?) -> Void,
-        close: @escaping @Sendable () -> Void
+        close: @escaping @Sendable () -> Void,
+        openSettings: @escaping @Sendable () -> Void = {}
     ) {
         self.paste = paste
         self.pasteText = pasteText
         self.close = close
+        self.openSettings = openSettings
     }
 }

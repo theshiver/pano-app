@@ -8,6 +8,7 @@ public struct SettingsView: View {
     private let exclusion: ExclusionModel
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
+    private let onMenuBarIconChanged: (Bool) -> Void
     private let onHotKeyChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
     private let onMaskSecretsChanged: (Bool) -> Void
@@ -19,6 +20,7 @@ public struct SettingsView: View {
         exclusion: ExclusionModel,
         onRetentionChanged: @escaping () -> Void,
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
+        onMenuBarIconChanged: @escaping (Bool) -> Void,
         onHotKeyChanged: @escaping () -> Void,
         onOCRChanged: @escaping (Bool) -> Void,
         onMaskSecretsChanged: @escaping (Bool) -> Void,
@@ -29,6 +31,7 @@ public struct SettingsView: View {
         self.exclusion = exclusion
         self.onRetentionChanged = onRetentionChanged
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
+        self.onMenuBarIconChanged = onMenuBarIconChanged
         self.onHotKeyChanged = onHotKeyChanged
         self.onOCRChanged = onOCRChanged
         self.onMaskSecretsChanged = onMaskSecretsChanged
@@ -64,6 +67,13 @@ public struct SettingsView: View {
                     Text("Centred on the active screen").tag(PanelPosition.activeScreenCentre)
                 }
                 Toggle("Launch Pano at login", isOn: toggle(\.launchAtLogin, onLaunchAtLoginChanged))
+                Toggle("Show icon in the menu bar", isOn: toggle(\.showMenuBarIcon, onMenuBarIconChanged))
+                if !prefs.showMenuBarIcon {
+                    note("Settings stay reachable from the ⚙︎ in the panel's status bar; quit with ⌘Q from this window.")
+                }
+            }
+            Section {
+                LabeledContent("Version", value: Preferences.versionString)
             }
             Section("Content") {
                 Toggle("Highlight code", isOn: toggle(\.highlightCode, onHighlightChanged))

@@ -77,6 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             close: { [weak panel] in
                 Task { @MainActor in panel?.hide() }
+            },
+            openSettings: { [weak self] in
+                Task { @MainActor in self?.openSettings() }
             }
         )
         let model = PanelModel(store: store, actions: actions)
@@ -87,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         installHotKey()
 
-        setUpStatusItem()
+        setUpStatusItem(visible: prefs.showMenuBarIcon)
 
         let onboarding = OnboardingController()
         self.onboarding = onboarding
@@ -95,10 +98,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         settings = SettingsController(
             prefs: prefs, store: store,
-            onHotKeyChanged: { [weak self] in self?.installHotKey() },
+            onHotKeyChanged: { [weak self] in
+                self?.installHotKey()
+                self?.refreshStatusItem()  // the menu shows the shortcut
+            },
             onExclusionsChanged: { [weak self] in self?.reloadExclusions() },
             onOCRChanged: { [weak self] enabled in
                 Task { await self?.engine?.setOCREnabled(enabled) }
+            },
+            onMenuBarIconChanged: { [weak self] show in
+                self?.setUpStatusItem(visible: show)
             },
             onMaskSecretsChanged: { [weak self] enabled in
                 Task { await self?.engine?.setMaskSecrets(enabled) }
@@ -124,48 +133,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Menu bar
 
-    /// The menu-bar item is the only always-visible control: pause/resume capture, clear history,
-    /// open the panel, and quit — the app is an accessory (LSUIElement) with no Dock icon, so
-    /// without this there is no way to quit it.
-    private func setUpStatusItem() {
+    /// The menu-bar item: open the panel, pause/resume capture, clear history, Settings, quit. The
+    /// app is an accessory (LSUIElement) with no Dock icon, so this is the everyday entry point.
+    /// It can be hidden in Settings; the panel's ⚙︎ then opens Settings, where ⌘Q still quits.
+    private func setUpStatusItem(visible: Bool) {
+        guard visible else {
+            if let statusItem { NSStatusBar.system.removeStatusItem(statusItem) }
+            statusItem = nil
+            return
+        }
+        guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(
-            systemSymbolName: "doc.on.clipboard",
-            accessibilityDescription: "Pano"
-        )
+        item.button?.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Pano")
+        item.button?.image?.isTemplate = true
         item.menu = buildMenu()
         statusItem = item
+        refreshStatusItem()
+    }
+
+    /// Paused capture dims the icon so the state is visible without opening the menu.
+    private func refreshStatusItem() {
+        statusItem?.button?.appearsDisabled = isPaused
+        statusItem?.button?.toolTip = isPaused ? String(localized: "Pano — paused") : "Pano"
+        statusItem?.menu = buildMenu()
     }
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(
-            withTitle: String(localized: "Open Pano"),
-            action: #selector(openPanel),
-            keyEquivalent: ""
-        ).target = self
+        let header = menu.addItem(withTitle: "Pano \(Preferences.versionString)", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(.separator())
 
-        let pauseTitle = isPaused ? String(localized: "Resume Pano") : String(localized: "Pause Pano")
-        menu.addItem(withTitle: pauseTitle, action: #selector(togglePause), keyEquivalent: "").target = self
+        let open = menu.addItem(
+            withTitle: String(localized: "Open Pano"), action: #selector(openPanel), keyEquivalent: "")
+        open.target = self
+        open.keyEquivalentModifierMask = []
+        open.title = String(localized: "Open Pano") + "\t" + (prefs?.hotKeyDisplay ?? "")
 
-        menu.addItem(
-            withTitle: String(localized: "Clear History…"),
-            action: #selector(clearHistory),
-            keyEquivalent: ""
-        ).target = self
+        let pause = menu.addItem(
+            withTitle: String(localized: "Pause capture"), action: #selector(togglePause), keyEquivalent: "")
+        pause.target = self
+        pause.state = isPaused ? .on : .off
 
-        menu.addItem(
-            withTitle: String(localized: "Settings…"),
-            action: #selector(openSettings),
-            keyEquivalent: ","
-        ).target = self
+        menu.addItem(.separator())
+        menu.addItem(withTitle: String(localized: "Clear History…"), action: #selector(clearHistory), keyEquivalent: "")
+            .target = self
+        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
+            .target = self
 
         menu.addItem(.separator())
         menu.addItem(
-            withTitle: String(localized: "Quit Pano"),
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
-        )
+            withTitle: String(localized: "Quit Pano"), action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q")
         return menu
     }
 
@@ -182,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isPaused.toggle()
         let paused = isPaused
         Task { await engine?.setPaused(paused) }
-        statusItem?.menu = buildMenu()
+        refreshStatusItem()
         statusItem?.button?.appearsDisabled = paused
     }
 

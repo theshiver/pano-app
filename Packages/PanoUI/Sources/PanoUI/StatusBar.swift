@@ -7,6 +7,7 @@ struct StatusBar: View {
     let total: Int
     let bytes: Int64
     let filtered: Bool
+    let openSettings: () -> Void
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -14,6 +15,16 @@ struct StatusBar: View {
             Text(filtered ? "\(shown.formatted()) of \(total.formatted()) items" : "\(total.formatted()) items")
             Spacer()
             Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+            Button(action: openSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 11))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .help("Settings")
+            .accessibilityLabel("Settings")
         }
         .font(Theme.chipFont)
         .foregroundStyle(Theme.secondary(scheme))

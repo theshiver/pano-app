@@ -15,6 +15,7 @@
 		C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9568E340008D408C1E2903 /* PanoStore */; };
 		D8FBD0161FA8AD0F8FDB5954 /* PanoTransforms in Frameworks */ = {isa = PBXBuildFile; productRef = C56539CEB87A16AEA90C5B55 /* PanoTransforms */; };
 		DD5C20F4F455D9EDD71BBCFC /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */; };
+		E0836501AEA113ACD3D26993 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B94400302E890E027583C578 /* Assets.xcassets */; };
 		E5E28B945B3C06AC280BEE97 /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */; };
 		F0B4ABE62C96658817473B01 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24816FD7623B37E865E76662 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
@@ -31,6 +32,7 @@
 		6A218AC9DEFFD58C4B5CE29A /* PanoUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoUI; path = Packages/PanoUI; sourceTree = SOURCE_ROOT; };
 		707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingController.swift; sourceTree = "<group>"; };
 		AF22A45DD1021A67EE7E2992 /* Pano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pano.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B94400302E890E027583C578 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				24816FD7623B37E865E76662 /* AppDelegate.swift */,
+				B94400302E890E027583C578 /* Assets.xcassets */,
 				270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */,
 				707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */,
 				2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */,
@@ -97,6 +100,7 @@
 			buildConfigurationList = 8441B2EAA775F26D58171361 /* Build configuration list for PBXNativeTarget "Pano" */;
 			buildPhases = (
 				D467BA56F02CC137BA3B3B4D /* Sources */,
+				4F321256D40F99E23FF2E503 /* Resources */,
 				4C4BD6846A232B56A9308CDB /* Frameworks */,
 			);
 			buildRules = (
@@ -153,6 +157,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4F321256D40F99E23FF2E503 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0836501AEA113ACD3D26993 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D467BA56F02CC137BA3B3B4D /* Sources */ = {
@@ -237,12 +252,14 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
@@ -322,12 +339,14 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;

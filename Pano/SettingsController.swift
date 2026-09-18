@@ -13,6 +13,7 @@ final class SettingsController {
     private let onHotKeyChanged: () -> Void
     private let onExclusionsChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
+    private let onMenuBarIconChanged: (Bool) -> Void
     private let onMaskSecretsChanged: (Bool) -> Void
     private let onHighlightChanged: (Bool) -> Void
     private let onThemeChanged: (String) -> Void
@@ -23,6 +24,7 @@ final class SettingsController {
         prefs: Preferences, store: Store,
         onHotKeyChanged: @escaping () -> Void, onExclusionsChanged: @escaping () -> Void,
         onOCRChanged: @escaping (Bool) -> Void,
+        onMenuBarIconChanged: @escaping (Bool) -> Void,
         onMaskSecretsChanged: @escaping (Bool) -> Void,
         onHighlightChanged: @escaping (Bool) -> Void,
         onThemeChanged: @escaping (String) -> Void
@@ -32,6 +34,7 @@ final class SettingsController {
         self.onHotKeyChanged = onHotKeyChanged
         self.onExclusionsChanged = onExclusionsChanged
         self.onOCRChanged = onOCRChanged
+        self.onMenuBarIconChanged = onMenuBarIconChanged
         self.onMaskSecretsChanged = onMaskSecretsChanged
         self.onHighlightChanged = onHighlightChanged
         self.onThemeChanged = onThemeChanged
@@ -69,6 +72,7 @@ final class SettingsController {
                     Task { await store.setRetention(prefs.retentionRules) }
                 },
                 onLaunchAtLoginChanged: { Self.setLaunchAtLogin($0) },
+                onMenuBarIconChanged: onMenuBarIconChanged,
                 onHotKeyChanged: onHotKeyChanged,
                 onOCRChanged: onOCRChanged,
                 onMaskSecretsChanged: onMaskSecretsChanged,

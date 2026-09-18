@@ -361,4 +361,9 @@ public final class PanelModel {
     public func close() {
         actions.close()
     }
+
+    public func openSettings() {
+        actions.close()
+        actions.openSettings()
+    }
 }

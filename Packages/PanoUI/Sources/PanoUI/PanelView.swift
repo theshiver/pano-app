@@ -34,7 +34,8 @@ public struct PanelView: View {
             StatusBar(
                 shown: model.items.count, total: model.totalCount, bytes: model.storageBytes,
                 filtered: model.selectedAppId != nil || model.selectedPinboardId != nil
-                    || !model.query.trimmingCharacters(in: .whitespaces).isEmpty)
+                    || !model.query.trimmingCharacters(in: .whitespaces).isEmpty,
+                openSettings: model.openSettings)
         }
         .frame(width: Theme.windowWidth, height: Theme.windowHeight)
         .background(.regularMaterial)
