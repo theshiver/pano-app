@@ -119,8 +119,11 @@ public actor Store {
     /// Structured search: bare words hit the FTS index; `app:`/`type:`/`pinned:`/`>7d`/`<2h`
     /// become predicates (docs/02-architecture.md). Parsed to a `SearchQuery`, then SQL is built
     /// with bound parameters. A terms-only query keeps the fast top-N-rowids path (<2ms at 100k).
-    public func search(_ raw: String, limit: Int = 200, now: Date = Date()) throws -> [ClipListItem] {
-        let query = SearchQuery(parsing: raw)
+    public func search(_ raw: String, pinboardId: Int64? = nil, limit: Int = 200, now: Date = Date()) throws
+        -> [ClipListItem]
+    {
+        var query = SearchQuery(parsing: raw)
+        query.pinboardId = pinboardId
         let trimmedTerms = query.terms.trimmingCharacters(in: .whitespaces)
 
         if !query.hasFilters {
@@ -166,6 +169,10 @@ public actor Store {
         }
         if query.pinnedOnly {
             wheres.append("clip.is_pinned = 1")
+        }
+        if let pinboardId = query.pinboardId {
+            wheres.append("clip.id IN (SELECT clip_id FROM pinboard_clip WHERE pinboard_id = ?)")
+            args.append(pinboardId)
         }
         if let olderThan = query.olderThan {
             wheres.append("clip.created_at < ?")
@@ -256,12 +263,14 @@ public actor Store {
         }
     }
 
-    /// Clears the history: deletes every unpinned clip and its blob files, leaving pinned items.
+    /// Clears the history: deletes every unpinned clip and its blob files, leaving pinned items
+    /// and anything on a pinboard.
     /// Returns the number of clips removed.
     @discardableResult
     public func clearHistory() throws -> Int {
         let (deleted, blobs) = try dbQueue.write { db -> (Int, [String]) in
-            let ids = try Int64.fetchAll(db, sql: "SELECT id FROM clip WHERE is_pinned = 0")
+            let ids = try Int64.fetchAll(
+                db, sql: "SELECT id FROM clip WHERE is_pinned = 0 AND id NOT IN (SELECT clip_id FROM pinboard_clip)")
             guard !ids.isEmpty else { return (0, []) }
             let list = ids.map { "\($0)" }.joined(separator: ",")
             let paths = try String.fetchAll(
@@ -275,6 +284,58 @@ public actor Store {
             try? FileManager.default.removeItem(at: blobsURL.appendingPathComponent(name))
         }
         return deleted
+    }
+
+    // MARK: Pinboards
+
+    public func pinboards() throws -> [Pinboard] {
+        try dbQueue.read { db in try Pinboard.order(Column("sort_order"), Column("id")).fetchAll(db) }
+    }
+
+    @discardableResult
+    public func createPinboard(name: String, colour: String, icon: String?) throws -> Int64 {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO pinboard (name, colour, icon, sort_order)
+                    VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM pinboard))
+                    """,
+                arguments: [name, colour, icon]
+            )
+            return db.lastInsertedRowID
+        }
+    }
+
+    /// Deletes the board only; its clips stay in the history (`ON DELETE CASCADE` drops the links).
+    public func deletePinboard(id: Int64) throws {
+        _ = try dbQueue.write { db in try db.execute(sql: "DELETE FROM pinboard WHERE id = ?", arguments: [id]) }
+    }
+
+    public func addToPinboard(clipId: Int64, pinboardId: Int64) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT OR IGNORE INTO pinboard_clip (pinboard_id, clip_id, sort_order)
+                    VALUES (?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM pinboard_clip WHERE pinboard_id = ?))
+                    """,
+                arguments: [pinboardId, clipId, pinboardId]
+            )
+        }
+    }
+
+    public func removeFromPinboard(clipId: Int64, pinboardId: Int64) throws {
+        _ = try dbQueue.write { db in
+            try db.execute(
+                sql: "DELETE FROM pinboard_clip WHERE pinboard_id = ? AND clip_id = ?", arguments: [pinboardId, clipId])
+        }
+    }
+
+    public func pinboardIds(of clipId: Int64) throws -> Set<Int64> {
+        try dbQueue.read { db in
+            Set(
+                try Int64.fetchAll(
+                    db, sql: "SELECT pinboard_id FROM pinboard_clip WHERE clip_id = ?", arguments: [clipId]))
+        }
     }
 
     // MARK: Exclusion list
@@ -317,7 +378,10 @@ public actor Store {
         let (deleted, orphanedBlobs) = try dbQueue.write { db -> (Int, [String]) in
             let ids = try Int64.fetchAll(
                 db,
-                sql: "SELECT id FROM clip WHERE expires_at IS NOT NULL AND expires_at < ? AND is_pinned = 0",
+                sql: """
+                    SELECT id FROM clip WHERE expires_at IS NOT NULL AND expires_at < ? AND is_pinned = 0
+                    AND id NOT IN (SELECT clip_id FROM pinboard_clip)
+                    """,
                 arguments: [now]
             )
             guard !ids.isEmpty else { return (0, []) }

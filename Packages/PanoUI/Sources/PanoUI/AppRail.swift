@@ -6,9 +6,10 @@ import SwiftUI
 /// most recent first. Tapping filters the list to that app; the selected icon gets a window-coloured
 /// ring inside an accent ring. Keyboard: ⌘] / ⌘[ walk the rail, `app:` in the search does the same.
 struct AppRail: View {
-    let apps: [SourceApp]
-    let selectedAppId: String?
-    let select: (String?) -> Void
+    let model: PanelModel
+    private var apps: [SourceApp] { model.apps }
+    private var selectedAppId: String? { model.selectedAppId }
+    private func select(_ id: String?) { model.selectApp(id) }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -30,6 +31,7 @@ struct AppRail: View {
                             .frame(width: 30, height: 30)
                     }
                 }
+                PinboardRail(model: model)
             }
             .padding(.vertical, 10)
             .frame(width: Theme.railWidth)
@@ -49,6 +51,7 @@ struct AppRail: View {
                 .opacity(isSelected || selectedAppId == nil ? 1 : 0.55)
         }
         .buttonStyle(.plain)
+        .focusable(false)  // the search field owns keyboard focus; rail buttons must never take it
         .help(label)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

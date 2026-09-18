@@ -20,5 +20,18 @@
 	<string>1</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Pano clipboard item</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.cancetin.pano.clip</string>
+		</dict>
+	</array>
 </dict>
 </plist>

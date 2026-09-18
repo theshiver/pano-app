@@ -59,20 +59,28 @@ final class PanelController {
         panel.orderOut(nil)
     }
 
-    /// The search field's text editor swallows Backspace before SwiftUI's `onKeyPress` can see it,
-    /// so deleting the selected clip is handled here, ahead of the responder chain. Only ⌘⌫ deletes,
-    /// never a plain Backspace — otherwise clearing the search query one character too far would
-    /// destroy a clip. Runs only while the panel is visible.
+    /// The search field's text editor swallows Backspace (and, since the rail gained buttons, the
+    /// arrow keys) before SwiftUI's `onKeyPress` can see them, so those are handled here, ahead of
+    /// the responder chain. Only ⌘⌫ deletes, never a plain Backspace — otherwise clearing the search
+    /// query one character too far would destroy a clip. Runs only while the panel is visible.
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel.isVisible else { return event }
-            let isDeleteKey = event.keyCode == 51  // Delete / Backspace
-            if isDeleteKey && event.modifierFlags.contains(.command) {
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            switch event.keyCode {
+            case 51 where modifiers.contains(.command):  // ⌘⌫
                 self.model?.deleteSelected()
                 return nil  // consume, so the field editor does not also act on it
+            case 125 where modifiers.isEmpty:  // ↓ — handled here too: the field editor or a rail
+                self.model?.moveSelection(by: 1)  // control can swallow arrows before SwiftUI's onKeyPress
+                return nil
+            case 126 where modifiers.isEmpty:  // ↑
+                self.model?.moveSelection(by: -1)
+                return nil
+            default:
+                return event
             }
-            return event
         }
     }
 

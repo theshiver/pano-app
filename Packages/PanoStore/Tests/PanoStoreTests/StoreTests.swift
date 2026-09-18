@@ -238,3 +238,23 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(apps.map(\.bundleId) == ["com.apple.finder", "com.apple.Safari"])
     #expect(apps.map(\.clipCount) == [1, 2])
 }
+
+@Test func pinboardMembershipFiltersAndProtectsFromClear() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let kept = try await store.insert(text("keep me"))
+    try await store.insert(text("throw away"))
+    let board = try await store.createPinboard(name: "Work", colour: "#2A6DF0", icon: "briefcase")
+    try await store.addToPinboard(clipId: kept, pinboardId: board)
+    try await store.addToPinboard(clipId: kept, pinboardId: board)  // idempotent
+
+    #expect(try await store.search("", pinboardId: board).map(\.id) == [kept])
+    #expect(try await store.pinboardIds(of: kept) == [board])
+    #expect(try await store.clearHistory() == 1)
+    #expect(try await store.count() == 1)
+
+    try await store.deletePinboard(id: board)
+    #expect(try await store.pinboards().isEmpty)
+    #expect(try await store.count() == 1)  // the clip survives the board
+}

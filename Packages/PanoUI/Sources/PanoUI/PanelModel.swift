@@ -14,6 +14,10 @@ public final class PanelModel {
     public private(set) var selectedAppId: String? {
         didSet { if selectedAppId != oldValue { reload() } }
     }
+    public private(set) var pinboards: [Pinboard] = []
+    public private(set) var selectedPinboardId: Int64? {
+        didSet { if selectedPinboardId != oldValue { reload() } }
+    }
     public var query: String = "" {
         didSet { if query != oldValue { reload() } }
     }
@@ -41,6 +45,7 @@ public final class PanelModel {
     public func activate() {
         query = ""
         selectedAppId = nil
+        selectedPinboardId = nil
         reload(selectTop: true)
     }
 
@@ -50,12 +55,15 @@ public final class PanelModel {
         let (searchText, transformToken) = Self.splitTransformToken(query)
         reloadTask?.cancel()
         let appId = selectedAppId
+        let boardId = selectedPinboardId
         reloadTask = Task {
             async let rail = (try? await store.sourceApps()) ?? []
-            let result = await fetch(appId.map { "app:\($0) " + searchText } ?? searchText)
+            async let boards = (try? await store.pinboards()) ?? []
+            let result = await fetch(appId.map { "app:\($0) " + searchText } ?? searchText, pinboardId: boardId)
             guard !Task.isCancelled else { return }
             items = result
             apps = await rail
+            pinboards = await boards
             if let appId, !apps.contains(where: { $0.id == appId }) { selectedAppId = nil }
             if selectTop || selectedId == nil || !items.contains(where: { $0.id == selectedId }) {
                 selectedId = items.first?.id
@@ -66,9 +74,10 @@ public final class PanelModel {
         }
     }
 
-    private func fetch(_ query: String) async -> [ClipListItem] {
+    private func fetch(_ query: String, pinboardId: Int64?) async -> [ClipListItem] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
-        return (try? trimmed.isEmpty ? await store.recent() : await store.search(trimmed)) ?? []
+        if trimmed.isEmpty, pinboardId == nil { return (try? await store.recent()) ?? [] }
+        return (try? await store.search(trimmed, pinboardId: pinboardId)) ?? []
     }
 
     private static let transformIds = Set(Transforms.all.map(\.id))
@@ -96,6 +105,50 @@ public final class PanelModel {
         let current = apps.firstIndex { $0.id == selectedAppId } ?? -1
         let next = min(max(-1, current + delta), apps.count - 1)
         selectedAppId = next < 0 ? nil : apps[next].id
+    }
+
+    // MARK: Pinboards
+
+    public func selectPinboard(_ id: Int64?) {
+        selectedPinboardId = (selectedPinboardId == id) ? nil : id
+    }
+
+    public func createPinboard(name: String, colour: String, icon: String?) {
+        Task {
+            try? await store.createPinboard(name: name, colour: colour, icon: icon)
+            reload()
+        }
+    }
+
+    public func deletePinboard(_ id: Int64) {
+        if selectedPinboardId == id { selectedPinboardId = nil }
+        Task {
+            try? await store.deletePinboard(id: id)
+            reload()
+        }
+    }
+
+    /// Drop target and ⌘⇧1–9: adds the clip to the board (dropping it on a board it is already on
+    /// is a no-op; ⌘⇧n toggles).
+    public func addClip(_ clipId: Int64, toPinboard id: Int64) {
+        Task {
+            try? await store.addToPinboard(clipId: clipId, pinboardId: id)
+            reload()
+        }
+    }
+
+    public func toggleSelectedClipInPinboard(rank: Int) {
+        guard let clipId = selectedId, pinboards.indices.contains(rank - 1) else { return }
+        let boardId = pinboards[rank - 1].id
+        Task {
+            let member = (try? await store.pinboardIds(of: clipId))?.contains(boardId) ?? false
+            if member {
+                try? await store.removeFromPinboard(clipId: clipId, pinboardId: boardId)
+            } else {
+                try? await store.addToPinboard(clipId: clipId, pinboardId: boardId)
+            }
+            reload()
+        }
     }
 
     // MARK: Transforms & selection
@@ -178,6 +231,7 @@ public final class PanelModel {
         }
     }
 
+    /// ⌘⌫: deletes the clip, or, while a pinboard is selected, removes it from that board.
     public func deleteSelected() {
         guard let id = selectedId else { return }
         // Move selection to the next row (or the previous if this was the last) before it vanishes.
@@ -187,8 +241,13 @@ public final class PanelModel {
             ? items[index + 1].id
             : (index > 0 ? items[index - 1].id : nil)
         selectedId = nextId
+        let boardId = selectedPinboardId
         Task {
-            try? await store.delete(id: id)
+            if let boardId {
+                try? await store.removeFromPinboard(clipId: id, pinboardId: boardId)  // in a board, ⌘⌫ only unlinks
+            } else {
+                try? await store.delete(id: id)
+            }
             reload()
         }
     }

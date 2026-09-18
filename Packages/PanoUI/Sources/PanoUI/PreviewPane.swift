@@ -163,6 +163,9 @@ struct PreviewPane: View {
         if model.activeTransform != nil {
             return "⏎ paste transformed · ⇧⏎ raw · ⌘P pin"
         }
+        if model.selectedPinboardId != nil {
+            return "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ remove from board"
+        }
         return "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete"
     }
 }
@@ -219,8 +222,8 @@ private struct ImagePreview: View {
 }
 
 extension Color {
-    /// Builds a Color from a #RRGGBB or #RRGGBBAA string, for the preview swatch only.
-    fileprivate init?(hex: String) {
+    /// Builds a Color from a #RRGGBB or #RRGGBBAA string (preview swatch, pinboard colours).
+    init?(hex: String) {
         var s = hex
         s.removeFirst()  // '#'
         guard s.allSatisfy(\.isHexDigit), s.count == 6 || s.count == 8 else { return nil }

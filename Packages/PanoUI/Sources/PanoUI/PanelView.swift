@@ -44,7 +44,7 @@ public struct PanelView: View {
     }
 
     private var rail: some View {
-        AppRail(apps: model.apps, selectedAppId: model.selectedAppId, select: model.selectApp)
+        AppRail(model: model)
             .frame(width: Theme.railWidth)
             .frame(maxHeight: .infinity)
             .background(.thinMaterial)
@@ -78,7 +78,11 @@ public struct PanelView: View {
                     guard press.modifiers.contains(.command), let n = Int(press.characters), n >= 1, n <= 9 else {
                         return .ignored
                     }
-                    model.pasteRank(n)
+                    if press.modifiers.contains(.shift) {
+                        model.toggleSelectedClipInPinboard(rank: n)  // ⌘⇧n: toggle on the nth pinboard
+                    } else {
+                        model.pasteRank(n)
+                    }
                     return .handled
                 }
                 .onKeyPress(characters: CharacterSet(charactersIn: "[]"), phases: .down) { press in
@@ -111,6 +115,7 @@ public struct PanelView: View {
                             showLanguage: model.highlightCode
                         )
                         .id(item.id)
+                        .draggable(ClipDrag(item))
                         .onTapGesture {
                             model.select(item.id)
                             model.pasteSelected()
@@ -126,15 +131,25 @@ public struct PanelView: View {
     }
 
     @ViewBuilder private var emptyState: some View {
-        let searching = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.selectedAppId != nil
+        let searching =
+            !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.selectedAppId != nil
+        let board = model.pinboards.first { $0.id == model.selectedPinboardId }
         VStack(spacing: 6) {
-            Image(systemName: searching ? "magnifyingglass" : "doc.on.clipboard")
-                .font(.system(size: 22))
-                .foregroundStyle(Theme.secondary(scheme))
-            Text(searching ? "No results" : "No clipboard history yet")
+            Image(
+                systemName: board != nil ? (board?.icon ?? "pin") : searching ? "magnifyingglass" : "doc.on.clipboard"
+            )
+            .font(.system(size: 22))
+            .foregroundStyle(Theme.secondary(scheme))
+            Text(board.map { "Nothing on “\($0.name)” yet" } ?? (searching ? "No results" : "No clipboard history yet"))
                 .font(Theme.rowContent)
                 .foregroundStyle(Theme.secondary(scheme))
-            if !searching {
+            if board != nil {
+                Text(
+                    "Drag a clip here, or press ⌘⇧\(model.pinboards.firstIndex { $0.id == board?.id }.map { $0 + 1 } ?? 1)."
+                )
+                .font(Theme.rowMeta)
+                .foregroundStyle(Theme.secondary(scheme))
+            } else if !searching {
                 Text("Copy something and it appears here.")
                     .font(Theme.rowMeta)
                     .foregroundStyle(Theme.secondary(scheme))

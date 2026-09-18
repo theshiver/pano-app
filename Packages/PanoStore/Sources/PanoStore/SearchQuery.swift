@@ -15,9 +15,11 @@ public struct SearchQuery: Equatable, Sendable {
     public var pinnedOnly = false
     public var olderThan: TimeInterval?
     public var newerThan: TimeInterval?
+    /// Set by the panel's rail, not parsed from text.
+    public var pinboardId: Int64?
 
     public var hasFilters: Bool {
-        app != nil || kind != nil || pinnedOnly || olderThan != nil || newerThan != nil
+        app != nil || kind != nil || pinnedOnly || olderThan != nil || newerThan != nil || pinboardId != nil
     }
 
     public init() {}
