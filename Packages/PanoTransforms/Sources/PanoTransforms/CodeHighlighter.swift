@@ -5,7 +5,7 @@ import Foundation
 /// PanoTransforms keeps depending on nothing.
 public enum CodeHighlighter {
     public enum Language: String, Sendable, CaseIterable {
-        case swift, javascript, python, json, shell, html, css, java, sql
+        case swift, javascript, python, json, shell, html, css, java, sql, markdown
     }
 
     /// Best-effort language guess from the code's shape. nil when nothing matches.
@@ -13,14 +13,16 @@ public enum CodeHighlighter {
         let t = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return nil }
         if t.hasPrefix("#!"), t.contains("sh") { return .shell }
+        // Same test as ClipClassifier.isMarkdown; prose about code otherwise scores as java/sql.
+        if t.ranges(of: /(?m)^ {0,3}(#{1,6} |[-*+] |\d+\. |> |```)/).count >= 2 { return .markdown }
         if (t.hasPrefix("{") || t.hasPrefix("[")),
             (try? JSONSerialization.jsonObject(with: Data(t.utf8))) != nil
         {
             return .json
         }
         let lower = t.lowercased()
-        if ["select ", "insert into", "update ", "delete from", " from ", " where ", " join "]
-            .filter({ lower.contains($0) }).count >= 2
+        if lower.contains(/(?m)^\s*(select|insert into|update|delete from)\b/),
+            lower.contains(/\s(from|where|set|values|join)\s/)
         {
             return .sql
         }

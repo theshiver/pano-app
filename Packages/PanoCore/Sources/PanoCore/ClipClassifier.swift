@@ -13,7 +13,7 @@ public enum ClipClassifier {
         if !utis.isDisjoint(with: PasteboardUTIs.imageUTIs) { return .image }
         // Code detection comes before rich text: editors and IDEs put RTF/HTML on the pasteboard
         // alongside the plain code, so checking richtext first would hide every copied snippet.
-        if let trimmed, isCode(trimmed) { return .code }
+        if let trimmed, isMarkdown(trimmed) || isCode(trimmed) { return .code }
         if utis.contains(PasteboardUTIs.rtf) || utis.contains(PasteboardUTIs.html) { return .richtext }
         return .text
     }
@@ -33,6 +33,12 @@ public enum ClipClassifier {
         return false
     }
 
+    /// Raw Markdown source (a README, a brief): two or more lines opening with a heading, list, quote
+    /// or fence marker. Checked before code because prose about code trips the code signals.
+    static func isMarkdown(_ text: String) -> Bool {
+        text.ranges(of: /(?m)^ {0,3}(#{1,6} |[-*+] |\d+\. |> |```)/).count >= 2
+    }
+
     /// Conservative code detection: strong structural signals so ordinary prose is not misclassified.
     /// JSON is left as text (its transform handles it); this is for source snippets.
     static func isCode(_ text: String) -> Bool {
@@ -49,8 +55,12 @@ public enum ClipClassifier {
         ]
         var hits = signals.filter { text.contains($0) }.count
         let lower = text.lowercased()
-        let sql = ["select ", "insert into", "update ", "delete from", " from ", " where "]
-        if sql.filter({ lower.contains($0) }).count >= 2 { hits += 2 }
+        // A statement keyword at line start plus a clause word; substring matches alone hit ordinary prose.
+        if lower.contains(/(?m)^\s*(select|insert into|update|delete from)\b/),
+            lower.contains(/\s(from|where|set|values)\s/)
+        {
+            hits += 2
+        }
         let codeyLines = text.split(separator: "\n").filter {
             let l = $0.trimmingCharacters(in: .whitespaces)
             return l.hasSuffix(";") || l.hasSuffix("{") || l.hasSuffix("}")

@@ -40,3 +40,16 @@ import Testing
     #expect(CodeHighlighter.detectLanguage(java) == .java)
     #expect(CodeHighlighter.detectLanguage("<!doctype html><html><body><div>hi</div></body></html>") == .html)
 }
+
+@Test func markdownBriefIsNotMistakenForSQLOrJava() {
+    let brief = """
+        # SHBDN-262532 — Session findings
+
+        **Do not treat this as a spec.** Verify every claim before changing code.
+
+        - Repos involved: `services` (API), `system`, `admin`
+        - Symptom: store sub-user onboarding blocked; update from where the public class was
+        """
+    #expect(CodeHighlighter.detectLanguage(brief) == .markdown)
+    #expect(CodeHighlighter.detectLanguage("please update the doc from where we left it") == nil)
+}

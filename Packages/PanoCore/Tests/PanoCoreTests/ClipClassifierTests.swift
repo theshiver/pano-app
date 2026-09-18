@@ -42,3 +42,11 @@ import Testing
     // Plain rich text (prose) stays richtext.
     #expect(ClipClassifier.kind(utis: ["public.rtf", "public.utf8-plain-text"], text: "just bold prose") == .richtext)
 }
+
+@Test func markdownSourceIsCodeAndProseAboutSQLIsNot() {
+    let md = "# Findings\n\n- Repos: `services`, `admin`\n- Symptom: update from where the public class was\n"
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: md) == .code)
+    let prose = "Please update the ticket from where we left it, and select the class you want."
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: prose) == .text)
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: "SELECT id FROM users WHERE x = 1;") == .code)
+}
