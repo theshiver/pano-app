@@ -1,7 +1,7 @@
 # Pano
 
 A clipboard manager for macOS that is free, open source, and never sends your
-data anywhere.
+data anywhere. Website: [pano-app.com](https://pano-app.com)
 
 macOS already remembers what you copied — in Spotlight, for half a day, with no
 pinning, no per-app exclusions, and rich text stripped out. Every good
@@ -51,7 +51,8 @@ Pano needs two permissions, both asked for by macOS and both revocable:
 ## Install
 
 Not released yet. It will be available on the Mac App Store (free), as a
-notarized DMG, and via `brew install --cask pano`.
+notarized DMG, and via `brew install --cask pano`. Follow
+[pano-app.com](https://pano-app.com) for the release.
 
 ## Build
 
