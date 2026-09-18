@@ -23,8 +23,8 @@ public enum CaptureBuilder {
 
     /// Returns nil when the copy carries a concealed/transient marker, or when no whitelisted
     /// representation is present (nothing worth storing).
-    /// `maskSecrets` off (Settings) stores secrets like any other text: no masking, normal retention.
-    public static func build(_ input: Input, maskSecrets: Bool = true) -> ClipCapture? {
+    /// `maskSecrets` (Settings, off by default) hides API keys/JWTs/card numbers and shortens their retention.
+    public static func build(_ input: Input, maskSecrets: Bool = false) -> ClipCapture? {
         let present = Set(input.utis)
         if !present.isDisjoint(with: PasteboardUTIs.markers) { return nil }
 

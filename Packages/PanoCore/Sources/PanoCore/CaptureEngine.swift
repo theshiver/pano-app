@@ -13,7 +13,7 @@ public actor CaptureEngine {
     private var task: Task<Void, Never>?
     private var paused = false
     private var ocrEnabled = false
-    private var maskSecrets = true
+    private var maskSecrets = false  // Settings default: off
     private var onChange: (@Sendable () -> Void)?
 
     public init(

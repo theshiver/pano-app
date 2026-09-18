@@ -41,7 +41,7 @@ public final class Preferences {
         retentionOtherDays = defaults.object(forKey: Key.retentionOtherDays) as? Int ?? 30
         launchAtLogin = defaults.bool(forKey: Key.launchAtLogin)
         ocrEnabled = defaults.object(forKey: Key.ocrEnabled) as? Bool ?? true
-        maskSecrets = defaults.object(forKey: Key.maskSecrets) as? Bool ?? true
+        maskSecrets = defaults.object(forKey: Key.maskSecrets) as? Bool ?? false
         highlightCode = defaults.object(forKey: Key.highlightCode) as? Bool ?? true
         syntaxTheme = defaults.string(forKey: Key.syntaxTheme) ?? "atom-one-dark"
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)

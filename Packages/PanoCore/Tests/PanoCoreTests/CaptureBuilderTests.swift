@@ -51,7 +51,8 @@ private func text(_ s: String) -> Data { Data(s.utf8) }
 }
 
 @Test func secretSetsSensitivityAndMask() {
-    let out = CaptureBuilder.build(input([("public.utf8-plain-text", text("ghp_16CharsOfTokenABCDEFGHIJ1234567890"))]))
+    let out = CaptureBuilder.build(
+        input([("public.utf8-plain-text", text("ghp_16CharsOfTokenABCDEFGHIJ1234567890"))]), maskSecrets: true)
     #expect(out?.sensitivity == .secret)
     #expect(out?.isMasked == true)
 }
@@ -66,12 +67,12 @@ private func text(_ s: String) -> Data { Data(s.utf8) }
     #expect(out?.kind == .richtext)
 }
 
-@Test func maskSecretsOffStoresSecretsAsPlainText() {
+@Test func maskSecretsIsOptIn() {
     let jwt =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
     let pairs = [("public.utf8-plain-text", text(jwt))]
-    #expect(CaptureBuilder.build(input(pairs))?.isMasked == true)
-    let plain = CaptureBuilder.build(input(pairs), maskSecrets: false)
+    #expect(CaptureBuilder.build(input(pairs), maskSecrets: true)?.isMasked == true)
+    let plain = CaptureBuilder.build(input(pairs))
     #expect(plain?.isMasked == false)
     #expect(plain?.sensitivity == Clip.Sensitivity.none)
 }

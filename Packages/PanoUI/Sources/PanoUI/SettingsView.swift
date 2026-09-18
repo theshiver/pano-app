@@ -126,7 +126,7 @@ public struct SettingsView: View {
                 )
                 Text(
                     "Text that looks like an API key, token, card or IBAN number is hidden in the list and preview "
-                        + "and expires after the sensitive-items window. Detection is local and rule-based."
+                        + "and expires after the sensitive-items window. Off by default; detection is local and rule-based."
                 )
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
