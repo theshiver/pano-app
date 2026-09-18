@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         self.store = store
+        #if DEBUG
+            if ProcessInfo.processInfo.environment["PANO_SEED"] == "1" { Task { try? await DemoSeed.run(store) } }
+        #endif
 
         let prefs = Preferences()
         self.prefs = prefs
@@ -144,8 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Pano")
-        item.button?.image?.isTemplate = true
+        item.button?.image = NSImage(named: "MenuBarIcon")
+        item.button?.image?.accessibilityDescription = "Pano"
         item.menu = buildMenu()
         statusItem = item
         refreshStatusItem()
@@ -160,10 +163,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-        let header = menu.addItem(withTitle: "Pano \(Preferences.versionString)", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(.separator())
-
         let open = menu.addItem(
             withTitle: String(localized: "Open Pano"), action: #selector(openPanel), keyEquivalent: "")
         open.target = self
@@ -238,8 +237,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// `PANO_STORE_FOLDER` picks a sibling folder inside the container (demo data for screenshots,
+    /// see DemoSeed.swift); the real history is never touched.
     private static func storeFolder() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("Pano", isDirectory: true)
+        let name = ProcessInfo.processInfo.environment["PANO_STORE_FOLDER"] ?? "Pano"
+        return base.appendingPathComponent(name, isDirectory: true)
     }
 }
