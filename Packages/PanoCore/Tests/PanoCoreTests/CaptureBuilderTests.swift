@@ -65,3 +65,13 @@ private func text(_ s: String) -> Data { Data(s.utf8) }
     #expect(out?.representations.map(\.uti) == ["public.rtf", "public.html", "public.utf8-plain-text"])
     #expect(out?.kind == .richtext)
 }
+
+@Test func maskSecretsOffStoresSecretsAsPlainText() {
+    let jwt =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    let pairs = [("public.utf8-plain-text", text(jwt))]
+    #expect(CaptureBuilder.build(input(pairs))?.isMasked == true)
+    let plain = CaptureBuilder.build(input(pairs), maskSecrets: false)
+    #expect(plain?.isMasked == false)
+    #expect(plain?.sensitivity == Clip.Sensitivity.none)
+}

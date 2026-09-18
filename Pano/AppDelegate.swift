@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? [])
             await engine.setOCREnabled(prefs.ocrEnabled)
+            await engine.setMaskSecrets(prefs.maskSecrets)
             await engine.setOnChange { [weak self] in
                 Task { @MainActor in
                     guard let self, self.panel?.isVisible == true else { return }
@@ -98,6 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onExclusionsChanged: { [weak self] in self?.reloadExclusions() },
             onOCRChanged: { [weak self] enabled in
                 Task { await self?.engine?.setOCREnabled(enabled) }
+            },
+            onMaskSecretsChanged: { [weak self] enabled in
+                Task { await self?.engine?.setMaskSecrets(enabled) }
             },
             onHighlightChanged: { [weak self] enabled in
                 self?.model?.highlightCode = enabled

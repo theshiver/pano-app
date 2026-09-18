@@ -10,6 +10,7 @@ public struct SettingsView: View {
     private let onLaunchAtLoginChanged: (Bool) -> Void
     private let onHotKeyChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
+    private let onMaskSecretsChanged: (Bool) -> Void
     private let onHighlightChanged: (Bool) -> Void
     private let onThemeChanged: (String) -> Void
 
@@ -20,6 +21,7 @@ public struct SettingsView: View {
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
         onHotKeyChanged: @escaping () -> Void,
         onOCRChanged: @escaping (Bool) -> Void,
+        onMaskSecretsChanged: @escaping (Bool) -> Void,
         onHighlightChanged: @escaping (Bool) -> Void,
         onThemeChanged: @escaping (String) -> Void
     ) {
@@ -29,6 +31,7 @@ public struct SettingsView: View {
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
         self.onHotKeyChanged = onHotKeyChanged
         self.onOCRChanged = onOCRChanged
+        self.onMaskSecretsChanged = onMaskSecretsChanged
         self.onHighlightChanged = onHighlightChanged
         self.onThemeChanged = onThemeChanged
     }
@@ -106,9 +109,27 @@ public struct SettingsView: View {
                     "Everything else: \(prefs.retentionOtherDays) day\(prefs.retentionOtherDays == 1 ? "" : "s")",
                     value: retentionBinding(\.retentionOtherDays), in: 1...365
                 )
-                Text("Pinned items are always kept, regardless of these limits.")
+                Text("Pinned items and items on a pinboard are always kept, regardless of these limits.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Secrets") {
+                Toggle(
+                    "Detect and mask secrets",
+                    isOn: Binding(
+                        get: { prefs.maskSecrets },
+                        set: {
+                            prefs.maskSecrets = $0
+                            onMaskSecretsChanged($0)
+                        })
+                )
+                Text(
+                    "Text that looks like an API key, token, card or IBAN number is hidden in the list and preview "
+                        + "and expires after the sensitive-items window. Detection is local and rule-based."
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
             }
 
             Section("Excluded apps") {

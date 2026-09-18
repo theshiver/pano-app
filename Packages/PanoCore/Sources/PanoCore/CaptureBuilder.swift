@@ -23,7 +23,8 @@ public enum CaptureBuilder {
 
     /// Returns nil when the copy carries a concealed/transient marker, or when no whitelisted
     /// representation is present (nothing worth storing).
-    public static func build(_ input: Input) -> ClipCapture? {
+    /// `maskSecrets` off (Settings) stores secrets like any other text: no masking, normal retention.
+    public static func build(_ input: Input, maskSecrets: Bool = true) -> ClipCapture? {
         let present = Set(input.utis)
         if !present.isDisjoint(with: PasteboardUTIs.markers) { return nil }
 
@@ -40,7 +41,7 @@ public enum CaptureBuilder {
 
         let text = input.data[PasteboardUTIs.plainText].flatMap { String(data: $0, encoding: .utf8) }
         let kind = ClipClassifier.kind(utis: keptUTIs, text: text)
-        let sensitivity = SensitiveScanner.classify(text)
+        let sensitivity = maskSecrets ? SensitiveScanner.classify(text) : .none
 
         return ClipCapture(
             kind: kind,

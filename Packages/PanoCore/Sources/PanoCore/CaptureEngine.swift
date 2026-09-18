@@ -13,6 +13,7 @@ public actor CaptureEngine {
     private var task: Task<Void, Never>?
     private var paused = false
     private var ocrEnabled = false
+    private var maskSecrets = true
     private var onChange: (@Sendable () -> Void)?
 
     public init(
@@ -43,6 +44,11 @@ public actor CaptureEngine {
     /// expensive). Toggling it does not re-scan existing clips.
     public func setOCREnabled(_ value: Bool) {
         ocrEnabled = value
+    }
+
+    /// Secret detection (API keys, JWTs, card/IBAN numbers → masked, short retention). Settings.
+    public func setMaskSecrets(_ value: Bool) {
+        maskSecrets = value
     }
 
     /// Called after the history changes (a new clip, or OCR text written back), so an open panel can
@@ -78,7 +84,7 @@ public actor CaptureEngine {
 
         guard let input = Self.read(pb) else { return nil }
         if let bundle = input.sourceBundleId, excludedBundleIds.contains(bundle) { return nil }
-        guard let capture = CaptureBuilder.build(input) else { return nil }
+        guard let capture = CaptureBuilder.build(input, maskSecrets: maskSecrets) else { return nil }
         guard let id = try? await store.insert(capture) else { return nil }
         scheduleOCR(for: capture, id: id)
         onChange?()

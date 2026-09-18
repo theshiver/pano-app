@@ -58,7 +58,7 @@ public final class PanelModel {
         let appId = selectedAppId
         let boardId = selectedPinboardId
         reloadTask = Task {
-            async let rail = (try? await store.sourceApps()) ?? []
+            async let rail = (try? await store.sourceApps(limit: 6)) ?? []  // leaves room for pinboards below
             async let boards = (try? await store.pinboards()) ?? []
             let result = await fetch(appId.map { "app:\($0) " + searchText } ?? searchText, pinboardId: boardId)
             guard !Task.isCancelled else { return }
