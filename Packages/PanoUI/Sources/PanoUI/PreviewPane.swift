@@ -43,7 +43,7 @@ struct PreviewPane: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .frame(height: Theme.searchHeight)  // same height as the search row so the dividers line up
         .contentShape(Rectangle())
         .gesture(WindowDragGesture())  // header doubles as the panel's title-bar drag handle
     }
