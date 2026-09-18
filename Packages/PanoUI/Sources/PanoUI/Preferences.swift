@@ -25,6 +25,7 @@ public final class Preferences {
     public var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Key.launchAtLogin) } }
     public var ocrEnabled: Bool { didSet { defaults.set(ocrEnabled, forKey: Key.ocrEnabled) } }
     public var highlightCode: Bool { didSet { defaults.set(highlightCode, forKey: Key.highlightCode) } }
+    public var syntaxTheme: String { didSet { defaults.set(syntaxTheme, forKey: Key.syntaxTheme) } }
 
     /// Global hotkey: a virtual key code and Carbon modifier mask, plus a display string like "⌘⇧V".
     public var hotKeyCode: UInt32 { didSet { defaults.set(Int(hotKeyCode), forKey: Key.hotKeyCode) } }
@@ -40,6 +41,7 @@ public final class Preferences {
         launchAtLogin = defaults.bool(forKey: Key.launchAtLogin)
         ocrEnabled = defaults.object(forKey: Key.ocrEnabled) as? Bool ?? true
         highlightCode = defaults.object(forKey: Key.highlightCode) as? Bool ?? true
+        syntaxTheme = defaults.string(forKey: Key.syntaxTheme) ?? "atom-one-dark"
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)
         hotKeyModifiers = UInt32(defaults.object(forKey: Key.hotKeyModifiers) as? Int ?? (cmdKey | shiftKey))
         hotKeyDisplay = defaults.string(forKey: Key.hotKeyDisplay) ?? "⌘⇧V"
@@ -53,6 +55,15 @@ public final class Preferences {
         return rules
     }
 
+    /// A curated set of Highlightr (highlight.js) themes offered in Settings.
+    public static let syntaxThemes: [(id: String, label: String)] = [
+        ("atom-one-dark", "Atom One Dark"), ("atom-one-light", "Atom One Light"),
+        ("github-dark", "GitHub Dark"), ("github", "GitHub Light"),
+        ("monokai", "Monokai"), ("dracula", "Dracula"), ("nord", "Nord"),
+        ("tokyo-night-dark", "Tokyo Night"), ("xcode-dark", "Xcode Dark"), ("xcode", "Xcode Light"),
+        ("solarized-dark", "Solarized Dark"), ("solarized-light", "Solarized Light"),
+    ]
+
     private enum Key {
         static let panelPosition = "panelPosition"
         static let retentionSecretHours = "retentionSecretHours"
@@ -61,6 +72,7 @@ public final class Preferences {
         static let launchAtLogin = "launchAtLogin"
         static let ocrEnabled = "ocrEnabled"
         static let highlightCode = "highlightCode"
+        static let syntaxTheme = "syntaxTheme"
         static let hotKeyCode = "hotKeyCode"
         static let hotKeyModifiers = "hotKeyModifiers"
         static let hotKeyDisplay = "hotKeyDisplay"

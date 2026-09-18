@@ -76,27 +76,33 @@ struct PreviewPane: View {
         } else if let output = model.transformOutput, !output.formats.isEmpty {
             colourFormats(output.formats)
         } else {
+            let code = highlightedCode(for: item)
             ScrollView {
-                textBody(for: item)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
+                Group {
+                    if let code {
+                        Text(code.text)
+                    } else {
+                        Text(model.transformOutput?.text ?? item.content ?? "—")
+                            .font(Theme.previewBody)
+                    }
+                }
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
             }
+            .background(code?.background ?? .clear)
             .transition(.opacity)
             .id(model.activeTransformId ?? "raw")
             .animation(.easeInOut(duration: 0.09), value: model.activeTransformId)
         }
     }
 
-    @ViewBuilder private func textBody(for item: ClipListItem) -> some View {
-        if model.highlightCode, model.activeTransform == nil, item.kind == .code,
-            let content = item.content, let language = CodeHighlighter.detectLanguage(content)
-        {
-            Text(CodeText.highlighted(content, language: language))
-        } else {
-            Text(model.transformOutput?.text ?? item.content ?? "—")
-                .font(Theme.previewBody)
-        }
+    private func highlightedCode(for item: ClipListItem) -> CodeText.Result? {
+        guard model.highlightCode, model.activeTransform == nil, item.kind == .code,
+            let content = item.content
+        else { return nil }
+        return CodeText.highlight(
+            content, language: CodeHighlighter.detectLanguage(content), theme: model.syntaxTheme)
     }
 
     /// A colour's formats: a large swatch, then one pasteable row per representation.

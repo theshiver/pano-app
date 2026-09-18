@@ -78,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         let model = PanelModel(store: store, actions: actions)
         model.highlightCode = prefs.highlightCode
+        model.syntaxTheme = prefs.syntaxTheme
         self.model = model
         panel.setContent(PanelView(model: model), model: model)
 
@@ -98,6 +99,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onHighlightChanged: { [weak self] enabled in
                 self?.model?.highlightCode = enabled
+                self?.model?.reload()
+            },
+            onThemeChanged: { [weak self] theme in
+                self?.model?.syntaxTheme = theme
                 self?.model?.reload()
             }
         )

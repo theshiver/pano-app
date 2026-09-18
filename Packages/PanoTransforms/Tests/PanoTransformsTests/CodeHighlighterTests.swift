@@ -11,39 +11,10 @@ import Testing
     #expect(CodeHighlighter.detectLanguage("just some prose, nothing to see") == nil)
 }
 
-@Test func highlightsSwiftKeywordsStringsComments() {
-    let code = "func f() { let s = \"hi\" // note\n return 42 }"
-    let spans = CodeHighlighter.spans(for: code, language: .swift)
-    let kinds = Set(spans.map(\.kind))
-    #expect(kinds.contains(.keyword))  // func / let / return
-    #expect(kinds.contains(.string))  // "hi"
-    #expect(kinds.contains(.comment))  // // note
-    #expect(kinds.contains(.number))  // 42
-
-    // The keyword inside the string/comment must not be separately highlighted (no overlaps).
-    let sorted = spans.sorted { $0.start < $1.start }
-    for (a, b) in zip(sorted, sorted.dropFirst()) {
-        #expect(a.start + a.length <= b.start)
-    }
-}
-
-@Test func commentSwallowsKeywords() {
-    let code = "// func let return\ncode"
-    let spans = CodeHighlighter.spans(for: code, language: .swift)
-    // The whole comment line is one comment span; no keyword spans inside it.
-    #expect(spans.contains { $0.kind == .comment })
-    #expect(!spans.contains { $0.kind == .keyword })
-}
-
 @Test func detectsJavaAndSQL() {
     let java = "public class Main {\n  public static void main(String[] args) {\n    System.out.println(1);\n  }\n}"
     #expect(CodeHighlighter.detectLanguage(java) == .java)
-
-    let sql = "SELECT name, id FROM users WHERE active = 1 ORDER BY id"
-    #expect(CodeHighlighter.detectLanguage(sql) == .sql)
-    // SQL keywords highlight regardless of case.
-    let spans = CodeHighlighter.spans(for: "select * from t where x = 1", language: .sql)
-    #expect(spans.contains { $0.kind == .keyword })
+    #expect(CodeHighlighter.detectLanguage("SELECT name, id FROM users WHERE active = 1 ORDER BY id") == .sql)
 }
 
 @Test func detectsJavaAnnotationStyleController() {
@@ -56,4 +27,16 @@ import Testing
         }
         """
     #expect(CodeHighlighter.detectLanguage(java) == .java)
+}
+
+@Test func javaGenericsNotMistakenForHTML() {
+    let java = """
+        @Override
+        public Tuple<String, Operator> load(Long userId) {
+            if (StringUtils.isNotEmpty(x)) { return new Tuple<>(a, b); }
+            return null;
+        }
+        """
+    #expect(CodeHighlighter.detectLanguage(java) == .java)
+    #expect(CodeHighlighter.detectLanguage("<!doctype html><html><body><div>hi</div></body></html>") == .html)
 }

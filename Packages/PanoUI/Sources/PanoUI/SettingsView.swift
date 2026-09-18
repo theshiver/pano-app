@@ -11,6 +11,7 @@ public struct SettingsView: View {
     private let onHotKeyChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
     private let onHighlightChanged: (Bool) -> Void
+    private let onThemeChanged: (String) -> Void
 
     public init(
         prefs: Preferences,
@@ -19,7 +20,8 @@ public struct SettingsView: View {
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
         onHotKeyChanged: @escaping () -> Void,
         onOCRChanged: @escaping (Bool) -> Void,
-        onHighlightChanged: @escaping (Bool) -> Void
+        onHighlightChanged: @escaping (Bool) -> Void,
+        onThemeChanged: @escaping (String) -> Void
     ) {
         self.prefs = prefs
         self.exclusion = exclusion
@@ -28,6 +30,7 @@ public struct SettingsView: View {
         self.onHotKeyChanged = onHotKeyChanged
         self.onOCRChanged = onOCRChanged
         self.onHighlightChanged = onHighlightChanged
+        self.onThemeChanged = onThemeChanged
     }
 
     public var body: some View {
@@ -60,6 +63,21 @@ public struct SettingsView: View {
                         }
                     )
                 )
+                if prefs.highlightCode {
+                    Picker(
+                        "Code theme",
+                        selection: Binding(
+                            get: { prefs.syntaxTheme },
+                            set: {
+                                prefs.syntaxTheme = $0; onThemeChanged($0)
+                            }
+                        )
+                    ) {
+                        ForEach(Preferences.syntaxThemes, id: \.id) { theme in
+                            Text(theme.label).tag(theme.id)
+                        }
+                    }
+                }
                 Picker("Panel position", selection: $prefs.panelPosition) {
                     Text("Near the cursor").tag(PanelPosition.nearCursor)
                     Text("Centre of the active screen").tag(PanelPosition.activeScreenCentre)

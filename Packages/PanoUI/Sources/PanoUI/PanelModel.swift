@@ -19,6 +19,7 @@ public final class PanelModel {
     public var activeTransformId: String?
     /// Whether to syntax-highlight code and show the detected language (Settings).
     public var highlightCode = true
+    public var syntaxTheme = "atom-one-dark"
     /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
     public var commandHeld: Bool = false
 
