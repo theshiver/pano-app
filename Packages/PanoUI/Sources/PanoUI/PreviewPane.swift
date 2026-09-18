@@ -139,7 +139,7 @@ struct PreviewPane: View {
 
     private var hint: String {
         let item = model.selectedItem
-        if item?.kind == .image, let ocr = item?.content, !ocr.isEmpty {
+        if (item?.kind == .image || item?.kind == .file), let ocr = item?.ocrText, !ocr.isEmpty {
             return "⏎ paste image · ⇧⏎ paste text · ⌘P pin"
         }
         if model.activeTransform != nil {
@@ -179,7 +179,7 @@ private struct ImagePreview: View {
             }
             .padding(12)
 
-            if imageData != nil, let ocr = item.content, !ocr.isEmpty {
+            if imageData != nil, let ocr = item.ocrText ?? item.content, !ocr.isEmpty {
                 Divider()
                 ScrollView {
                     Text(ocr)

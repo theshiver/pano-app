@@ -80,7 +80,7 @@ public actor CaptureEngine {
     /// Kicks OCR onto a detached task for image clips and writes the recognised text back through
     /// the store, so screenshots become searchable without blocking the capture loop.
     private func scheduleOCR(for capture: ClipCapture, id: Int64) {
-        guard ocrEnabled, capture.kind == .image else { return }
+        guard ocrEnabled else { return }
         let imageData = capture.representations.first { PasteboardUTIs.imageUTIs.contains($0.uti) }?.data
         guard let imageData else { return }
         let store = store

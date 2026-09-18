@@ -15,6 +15,7 @@ public struct ClipListItem: Codable, Sendable, Identifiable, FetchableRecord {
     public var sensitivity: Clip.Sensitivity
     public var copyCount: Int
     public var lastSeenAt: Date
+    public var ocrText: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -27,9 +28,10 @@ public struct ClipListItem: Codable, Sendable, Identifiable, FetchableRecord {
         case sensitivity
         case copyCount = "copy_count"
         case lastSeenAt = "last_seen_at"
+        case ocrText = "ocr_text"
     }
 
     static let columns =
         "clip.id, clip.kind, clip.content, clip.source_bundle_id, clip.source_name, "
-        + "clip.is_pinned, clip.is_masked, clip.sensitivity, clip.copy_count, clip.last_seen_at"
+        + "clip.is_pinned, clip.is_masked, clip.sensitivity, clip.copy_count, clip.last_seen_at, clip.ocr_text"
 }

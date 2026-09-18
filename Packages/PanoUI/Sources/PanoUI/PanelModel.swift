@@ -128,7 +128,7 @@ public final class PanelModel {
         guard let selectedId, let item = selectedItem else { return }
         if !plainText, let output = transformOutput {
             actions.pasteText(output.text)  // ⏎ with a transform active pastes the transformed value
-        } else if plainText, item.kind == .image, let ocr = item.content, !ocr.isEmpty {
+        } else if plainText, let ocr = item.ocrText, !ocr.isEmpty {
             actions.pasteText(ocr)  // ⇧⏎ on an OCR'd image pastes the recognised text
         } else {
             actions.paste(selectedId, plainText)  // ⏎ pastes the item; ⇧⏎ pastes it plain
