@@ -13,6 +13,7 @@ public actor CaptureEngine {
     private var task: Task<Void, Never>?
     private var paused = false
     private var ocrEnabled = false
+    private var onChange: (@Sendable () -> Void)?
 
     public init(
         store: Store,
@@ -42,6 +43,12 @@ public actor CaptureEngine {
     /// expensive). Toggling it does not re-scan existing clips.
     public func setOCREnabled(_ value: Bool) {
         ocrEnabled = value
+    }
+
+    /// Called after the history changes (a new clip, or OCR text written back), so an open panel can
+    /// refresh. Runs on the caller's thread; the app hops to the main actor.
+    public func setOnChange(_ callback: @escaping @Sendable () -> Void) {
+        onChange = callback
     }
 
     public func start() {
@@ -74,6 +81,7 @@ public actor CaptureEngine {
         guard let capture = CaptureBuilder.build(input) else { return nil }
         guard let id = try? await store.insert(capture) else { return nil }
         scheduleOCR(for: capture, id: id)
+        onChange?()
         return id
     }
 
@@ -84,9 +92,11 @@ public actor CaptureEngine {
         let imageData = capture.representations.first { PasteboardUTIs.imageUTIs.contains($0.uti) }?.data
         guard let imageData else { return }
         let store = store
+        let onChange = onChange
         Task.detached(priority: .utility) {
             guard let text = await OCRService.recognizeText(in: imageData) else { return }
             try? await store.setOCRText(text, id: id)
+            onChange?()
         }
     }
 

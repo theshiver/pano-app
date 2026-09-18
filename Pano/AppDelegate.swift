@@ -38,6 +38,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? [])
             await engine.setOCREnabled(prefs.ocrEnabled)
+            await engine.setOnChange { [weak self] in
+                Task { @MainActor in
+                    guard let self, self.panel?.isVisible == true else { return }
+                    self.model?.reload()
+                }
+            }
             await engine.start()
         }
 
