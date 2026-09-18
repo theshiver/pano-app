@@ -11,6 +11,9 @@ public enum ClipClassifier {
         if let trimmed, isURL(trimmed) { return .url }
         if utis.contains(PasteboardUTIs.fileURL) { return .file }
         if !utis.isDisjoint(with: PasteboardUTIs.imageUTIs) { return .image }
+        // Code detection comes before rich text: editors and IDEs put RTF/HTML on the pasteboard
+        // alongside the plain code, so checking richtext first would hide every copied snippet.
+        if let trimmed, isCode(trimmed) { return .code }
         if utis.contains(PasteboardUTIs.rtf) || utis.contains(PasteboardUTIs.html) { return .richtext }
         return .text
     }
@@ -28,6 +31,31 @@ public enum ClipClassifier {
             return true
         }
         return false
+    }
+
+    /// Conservative code detection: strong structural signals so ordinary prose is not misclassified.
+    /// JSON is left as text (its transform handles it); this is for source snippets.
+    static func isCode(_ text: String) -> Bool {
+        guard text.count >= 12 else { return false }
+        if text.hasPrefix("#!") { return true }
+        if (text.hasPrefix("{") || text.hasPrefix("[")),
+            (try? JSONSerialization.jsonObject(with: Data(text.utf8))) != nil
+        {
+            return false  // data, not code
+        }
+        let signals = [
+            "function ", "=>", "const ", "let ", "var ", "def ", "func ", "class ", "import ",
+            "#include", "public ", "private ", "return ", "</", "/>", "() {", ") {", "){", "};",
+        ]
+        var hits = signals.filter { text.contains($0) }.count
+        let lower = text.lowercased()
+        let sql = ["select ", "insert into", "update ", "delete from", " from ", " where "]
+        if sql.filter({ lower.contains($0) }).count >= 2 { hits += 2 }
+        let codeyLines = text.split(separator: "\n").filter {
+            let l = $0.trimmingCharacters(in: .whitespaces)
+            return l.hasSuffix(";") || l.hasSuffix("{") || l.hasSuffix("}")
+        }.count
+        return hits >= 2 || (hits >= 1 && codeyLines >= 1) || codeyLines >= 3
     }
 
     /// The whole string is a single http/https/ftp/mailto URL with a host, no embedded whitespace.

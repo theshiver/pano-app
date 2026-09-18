@@ -25,3 +25,20 @@ import Testing
     #expect(ClipClassifier.kind(utis: ["public.rtf", "public.utf8-plain-text"], text: "bold") == .richtext)
     #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: "hello") == .text)
 }
+
+@Test func classifiesCodeConservatively() {
+    let js = "function add(a, b) {\n  return a + b;\n}"
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: js) == .code)
+    // Prose is not code.
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: "Let me know if that works for you.") == .text)
+    // JSON stays text (its transform handles it), not code.
+    #expect(ClipClassifier.kind(utis: ["public.utf8-plain-text"], text: "{\"a\": 1, \"b\": 2}") == .text)
+}
+
+@Test func codeFromEditorWithRichTextIsStillCode() {
+    // IDEs put RTF/HTML on the pasteboard next to the plain code.
+    let java = "public Response load() {\n  return new Response(x);\n}"
+    #expect(ClipClassifier.kind(utis: ["public.rtf", "public.html", "public.utf8-plain-text"], text: java) == .code)
+    // Plain rich text (prose) stays richtext.
+    #expect(ClipClassifier.kind(utis: ["public.rtf", "public.utf8-plain-text"], text: "just bold prose") == .richtext)
+}

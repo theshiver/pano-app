@@ -1,4 +1,5 @@
 import PanoStore
+import PanoTransforms
 import SwiftUI
 
 /// One result row: type dot, single-line content, and a metadata line (source · age · copies).
@@ -66,6 +67,11 @@ struct ClipRow: View {
     private var metadata: String {
         var parts: [String] = []
         if item.isMasked { parts.append("not stored") }
+        if item.kind == .code, let content = item.content,
+            let language = CodeHighlighter.detectLanguage(content)
+        {
+            parts.append(language.rawValue)
+        }
         if let source = item.sourceName ?? item.sourceBundleId { parts.append(source) }
         parts.append(Self.age(item.lastSeenAt))
         if item.copyCount > 1 { parts.append("×\(item.copyCount)") }
