@@ -58,11 +58,14 @@ public struct PanelView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Theme.secondary(scheme))
                 .accessibilityHidden(true)
-            TextField("Search", text: $model.query)
+            TextField("Search — try type:code, app:xcode, >7d", text: $model.query)
                 .textFieldStyle(.plain)
                 .font(Theme.searchFont)
                 .focused($searchFocused)
                 .accessibilityLabel("Search clipboard history")
+                .background(alignment: .leading) { ghostCompletion }
+                .onKeyPress(.tab) { model.acceptCompletion() ? .handled : .ignored }
+                .onKeyPress(.rightArrow) { model.acceptCompletion() ? .handled : .ignored }
                 .onKeyPress(.downArrow) {
                     model.moveSelection(by: 1); return .handled
                 }
@@ -101,6 +104,18 @@ public struct PanelView: View {
         }
         .padding(.horizontal, 13)
         .frame(height: Theme.searchHeight)
+    }
+
+    /// The completion drawn behind the field: the typed text invisibly (to take up its width), then
+    /// the suggested rest in secondary colour, so it reads as one line.
+    @ViewBuilder private var ghostCompletion: some View {
+        if let completion = model.completion {
+            (Text(model.query).foregroundColor(.clear) + Text(completion).foregroundColor(Theme.secondary(scheme)))
+                .font(Theme.searchFont)
+                .lineLimit(1)
+                .allowsHitTesting(false)
+                .accessibilityLabel("Suggestion: \(model.query)\(completion). Press Tab to accept.")
+        }
     }
 
     private var list: some View {

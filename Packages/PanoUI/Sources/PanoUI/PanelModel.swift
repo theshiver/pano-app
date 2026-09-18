@@ -100,6 +100,41 @@ public final class PanelModel {
         return (query, nil)
     }
 
+    // MARK: Search completion
+
+    /// Inline ghost text for the search field: the rest of a filter key (`t` → `ype:`) or of a
+    /// filter value (`type:i` → `mage`, `app:x` → `code`). Tab or → accepts it. nil when nothing fits.
+    public var completion: String? {
+        Self.completion(for: query, apps: apps.compactMap(\.name))
+    }
+
+    nonisolated static let filterKeys = ["type:", "app:", "pinned:"]
+    nonisolated static let kindValues = ["text", "code", "url", "image", "file", "colour", "richtext"]
+
+    nonisolated static func completion(for query: String, apps: [String]) -> String? {
+        guard let last = query.split(separator: " ", omittingEmptySubsequences: false).last, !last.isEmpty else {
+            return nil
+        }
+        let token = last.lowercased()
+        func suffix(_ candidates: [String], after prefix: String) -> String? {
+            candidates.first { $0.lowercased().hasPrefix(prefix) && $0.lowercased() != prefix }
+                .map { String($0.dropFirst(prefix.count)) }
+        }
+        guard let colon = token.firstIndex(of: ":") else { return suffix(filterKeys, after: token) }
+        let value = String(token[token.index(after: colon)...])
+        switch token[...colon] {
+        case "type:": return suffix(kindValues, after: value)
+        case "app:": return suffix(apps.map { $0.split(separator: " ").first.map(String.init) ?? $0 }, after: value)
+        default: return nil
+        }
+    }
+
+    public func acceptCompletion() -> Bool {
+        guard let completion else { return false }
+        query += completion + (completion.hasSuffix(":") ? "" : " ")
+        return true
+    }
+
     // MARK: Rail
 
     /// Tapping the active app's icon (or "All") clears the filter.

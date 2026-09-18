@@ -129,3 +129,15 @@ private func text(_ s: String) -> ClipCapture {
     #expect(model.items.count == 1)
     #expect(model.activeTransformId == "colour")
 }
+
+@Test func searchCompletionSuggestsKeysAndValues() {
+    let apps = ["Xcode", "Google Chrome"]
+    #expect(PanelModel.completion(for: "t", apps: apps) == "ype:")
+    #expect(PanelModel.completion(for: "invoice a", apps: apps) == "pp:")
+    #expect(PanelModel.completion(for: "type:i", apps: apps) == "mage")
+    #expect(PanelModel.completion(for: "app:x", apps: apps) == "code")
+    #expect(PanelModel.completion(for: "app:g", apps: apps) == "oogle")
+    #expect(PanelModel.completion(for: "type:image", apps: apps) == nil)
+    #expect(PanelModel.completion(for: "hello ", apps: apps) == nil)
+    #expect(PanelModel.completion(for: "", apps: apps) == nil)
+}
