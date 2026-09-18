@@ -1,5 +1,6 @@
 #if DEBUG
     import AppKit
+    import PanoCore
     import PanoStore
 
     /// Demo history for website screenshots. Debug builds only; runs when launched with
@@ -122,6 +123,44 @@
             Seed(kind: .text, text: "Keyboard-first clipboard manager for macOS", app: notes, minutesAgo: 360),
         ]
 
+        /// Renders a terminal-style build error, the kind of screenshot people paste into chat.
+        private static func errorScreenshot() -> Data {
+            let lines = [
+                ("error: ", "cannot find 'ClipListItem' in scope", NSColor(red: 1, green: 0.42, blue: 0.42, alpha: 1)),
+                ("  --> ", "PanoUI/Sources/PanoUI/ClipRow.swift:14:20", nil),
+                ("14 | ", "    let clip: ClipListItem", nil),
+                ("   | ", "              ^~~~~~~~~~~~", NSColor(red: 0.4, green: 0.8, blue: 1, alpha: 1)),
+                (
+                    "help: ", "add `import PanoStore` to the top of the file",
+                    NSColor(red: 0.55, green: 0.9, blue: 0.6, alpha: 1)
+                ),
+            ]
+            let width = 1240, height = 60 + lines.count * 44
+            guard
+                let rep = NSBitmapImageRep(
+                    bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8, samplesPerPixel: 4,
+                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+            else { return Data() }
+            rep.size = NSSize(width: width, height: height)
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            NSColor(red: 0.11, green: 0.12, blue: 0.15, alpha: 1).setFill()
+            NSRect(x: 0, y: 0, width: width, height: height).fill()
+            let font = NSFont.monospacedSystemFont(ofSize: 26, weight: .regular)
+            for (index, line) in lines.enumerated() {
+                let y = CGFloat(height - 52 - index * 44)
+                let prefix = NSAttributedString(
+                    string: line.0,
+                    attributes: [.font: font, .foregroundColor: line.2 ?? NSColor(white: 0.55, alpha: 1)])
+                prefix.draw(at: NSPoint(x: 36, y: y))
+                NSAttributedString(
+                    string: line.1, attributes: [.font: font, .foregroundColor: NSColor(white: 0.92, alpha: 1)]
+                ).draw(at: NSPoint(x: 36 + prefix.size().width, y: y))
+            }
+            NSGraphicsContext.restoreGraphicsState()
+            return rep.representation(using: .png, properties: [:]) ?? Data()
+        }
+
         @MainActor static func run(_ store: Store) async throws {
             // Every launch starts from the same state (clearHistory would keep pinned and board members).
             for board in try await store.pinboards() { try await store.deletePinboard(id: board.id) }
@@ -150,6 +189,15 @@
                     sourceBundleId: "com.apple.Preview", sourceName: "Preview")
                 try await store.insert(image, now: now.addingTimeInterval(-50 * 60))
             }
+
+            // A screenshot of a compiler error, run through the real OCR so the site shows searchable image text.
+            let shot = errorScreenshot()
+            let shotId = try await store.insert(
+                ClipCapture(
+                    kind: .image, content: nil, representations: [.init(uti: "public.png", data: shot)],
+                    sourceBundleId: xcode.0, sourceName: xcode.1),
+                now: now.addingTimeInterval(-10 * 60))
+            if let text = await OCRService.recognizeText(in: shot) { try await store.setOCRText(text, id: shotId) }
 
             let snippets = try await store.createPinboard(name: "Snippets", colour: "#8B5CF6", icon: nil)
             for index in [0, 4, 5] { try await store.addToPinboard(clipId: ids[index], pinboardId: snippets) }
