@@ -44,11 +44,11 @@ targets:
       properties:
         LSUIElement: true
         # Rows dragged inside the panel carry the clip id under this type (PanoUI/ClipDrag.swift).
-        # Transferable's custom UTType only resolves when the app declares it here.
+        # Transferable's custom UTType only resolves when the app declares it here. It deliberately
+        # does NOT conform to public.data: Finder would otherwise write it out as a file on drag-out.
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: com.cancetin.pano.clip
             UTTypeDescription: Pano clipboard item
-            UTTypeConformsTo: [public.data]
     # xcodegen writes Pano/Pano.entitlements from this block; edit here, not the file.
     # The entitlements file is a product statement (docs/04-permissions.md): sandbox and nothing else.
     entitlements:

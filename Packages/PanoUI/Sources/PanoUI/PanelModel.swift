@@ -39,6 +39,7 @@ public final class PanelModel {
     public init(store: Store, actions: PanelActions) {
         self.store = store
         self.actions = actions
+        ClipDrag.payload = { id in (try? await store.payload(of: id)) ?? [] }  // drag-out loads bytes lazily
     }
 
     /// Called when the panel is shown: reset the query and load the newest clips, selecting the top.
