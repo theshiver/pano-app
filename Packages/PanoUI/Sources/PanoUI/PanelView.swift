@@ -59,12 +59,14 @@ public struct PanelView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Theme.secondary(scheme))
                 .accessibilityHidden(true)
-            TextField("Search — try type:code, app:xcode, >7d", text: $model.query)
+            TextField("", text: $model.query)
                 .textFieldStyle(.plain)
                 .font(Theme.searchFont)
                 .focused($searchFocused)
                 .accessibilityLabel("Search clipboard history")
-                .background(alignment: .leading) { ghostCompletion }
+                .background(alignment: .leading) {
+                    if model.query.isEmpty { SearchHints() } else { ghostCompletion }
+                }
                 .onKeyPress(.tab) { model.acceptCompletion() ? .handled : .ignored }
                 .onKeyPress(.rightArrow) { model.acceptCompletion() ? .handled : .ignored }
                 .onKeyPress(.downArrow) {
