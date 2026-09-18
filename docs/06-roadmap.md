@@ -54,7 +54,7 @@ permission flow experienced end to end, the name reserved.
 
 - Transform bar: json, b64, jwt, slug, url, markdown, clean
 - Colour conversion: hex, rgb, hsl, SwiftUI `Color`, Tailwind
-- Syntax highlighting with language detection
+- Syntax highlighting with language detection (shipped hand-rolled; replace with a library — Highlightr — for consistency, see adr/0006, needs adr/0007)
 - Vision OCR and image text search
 - Search syntax: `app:`, `type:`, `>7d`, `pinned:`
 

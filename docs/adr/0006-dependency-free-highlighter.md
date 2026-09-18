@@ -1,6 +1,6 @@
 # ADR 0006 — A dependency-free syntax highlighter
 
-**Status:** accepted · 2026-09-18
+**Status:** accepted 2026-09-18 · **revisit triggered 2026-09-18** — the hand-rolled highlighter is too inconsistent in practice; Can wants a real library. See "Revisit" below.
 
 ## Context
 
@@ -39,3 +39,17 @@ html, css, java, sql.
 
 Code detection runs before the rich-text check in `ClipClassifier`: IDEs put RTF/HTML on
 the pasteboard next to the plain code, which otherwise hides every snippet as rich text.
+
+
+## Revisit (2026-09-18)
+
+In daily use the hand-rolled highlighter is inconsistent (misses languages, mis-tokenises),
+and Can decided the glance-quality trade-off is not good enough. Plan: replace it with a
+library. Leading candidate is **Highlightr** (highlight.js via JavaScriptCore): ~185
+languages with auto-detection, mature. JavaScriptCore is a system framework, so it keeps
+the local-only promise; the cost is a real dependency and binary size, which a follow-up
+ADR (0007) will record when the swap is made.
+
+Scope of the swap: `CodeHighlighter.detectLanguage` and `.spans` are the seam. `PanoUI/CodeText`
+builds the AttributedString. Replacing the tokeniser behind those keeps `PreviewPane`/`ClipRow`
+unchanged. `ClipClassifier.isCode` (the "is this code at all" heuristic) stays ours regardless.
