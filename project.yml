@@ -43,6 +43,8 @@ targets:
       path: Pano/Info.plist
       properties:
         LSUIElement: true
+        # App Store Connect rejects a Mac build without a category ("Prepare Build for App Store Connect" fails).
+        LSApplicationCategoryType: public.app-category.productivity
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Rows dragged inside the panel carry the clip id under this type (PanoUI/ClipDrag.swift).
