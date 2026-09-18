@@ -1,3 +1,4 @@
+import AppKit
 import PanoStore
 import SwiftUI
 
@@ -7,6 +8,7 @@ import SwiftUI
 public struct PanelView: View {
     @State private var model: PanelModel
     @FocusState private var searchFocused: Bool
+    @State private var lastClick: (id: Int64, at: Date)?
     @Environment(\.colorScheme) private var scheme
 
     public init(model: PanelModel) {
@@ -109,6 +111,21 @@ public struct PanelView: View {
         .frame(height: Theme.searchHeight)
     }
 
+    /// A click selects at once; a second click on the same row within the double-click interval
+    /// pastes. Done by hand because `onTapGesture(count: 2)` makes SwiftUI hold every single click
+    /// until the double-click window has passed, which read as lag.
+    private func click(_ id: Int64) {
+        let now = Date()
+        if let last = lastClick, last.id == id, now.timeIntervalSince(last.at) < NSEvent.doubleClickInterval {
+            lastClick = nil
+            model.select(id)
+            model.pasteSelected()
+            return
+        }
+        lastClick = (id, now)
+        model.select(id)
+    }
+
     /// The completion drawn behind the field: the typed text invisibly (to take up its width), then
     /// the suggested rest in secondary colour, so it reads as one line.
     @ViewBuilder private var ghostCompletion: some View {
@@ -137,11 +154,7 @@ public struct PanelView: View {
                         )
                         .id(item.id)
                         .draggable(ClipDrag(item))
-                        .onTapGesture(count: 2) {  // double-click pastes; a single click only selects
-                            model.select(item.id)
-                            model.pasteSelected()
-                        }
-                        .onTapGesture { model.select(item.id) }
+                        .onTapGesture { click(item.id) }
                     }
                 }
                 .padding(6)

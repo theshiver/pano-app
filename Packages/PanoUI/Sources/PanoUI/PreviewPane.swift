@@ -31,12 +31,12 @@ struct PreviewPane: View {
 
     private func header(_ item: ClipListItem) -> some View {
         HStack(spacing: 6) {
-            Text(item.sourceName ?? item.sourceBundleId ?? "Unknown")
-                .font(Theme.rowMeta)
-                .foregroundStyle(Theme.secondary(scheme))
-            Text(ClipRow.age(item.lastSeenAt))
-                .font(Theme.rowMeta)
-                .foregroundStyle(Theme.secondary(scheme))
+            Text(
+                [item.sourceName ?? item.sourceBundleId ?? "Unknown", ClipRow.age(item.lastSeenAt), kindLabel(item)]
+                    .joined(separator: " · ")
+            )
+            .font(Theme.rowMeta)
+            .foregroundStyle(Theme.secondary(scheme))
             Spacer()
             ForEach(model.availableTransforms, id: \.id) { transform in
                 chip(transform)
@@ -46,6 +46,16 @@ struct PreviewPane: View {
         .frame(height: Theme.searchHeight)  // same height as the search row so the dividers line up
         .contentShape(Rectangle())
         .gesture(WindowDragGesture())  // header doubles as the panel's title-bar drag handle
+    }
+
+    /// "code · swift" when the language is known, otherwise the kind ("text", "image", "url"...).
+    private func kindLabel(_ item: ClipListItem) -> String {
+        if item.kind == .code, model.highlightCode, let content = item.content,
+            let language = CodeHighlighter.detectLanguage(String(content.prefix(4000)))
+        {
+            return "code · \(language.rawValue)"
+        }
+        return item.kind == .richtext ? "rich text" : item.kind.rawValue
     }
 
     private func chip(_ transform: any Transform) -> some View {
