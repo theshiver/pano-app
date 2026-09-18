@@ -77,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         let model = PanelModel(store: store, actions: actions)
+        model.highlightCode = prefs.highlightCode
         self.model = model
         panel.setContent(PanelView(model: model), model: model)
 
@@ -94,6 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onExclusionsChanged: { [weak self] in self?.reloadExclusions() },
             onOCRChanged: { [weak self] enabled in
                 Task { await self?.engine?.setOCREnabled(enabled) }
+            },
+            onHighlightChanged: { [weak self] enabled in
+                self?.model?.highlightCode = enabled
+                self?.model?.reload()
             }
         )
     }

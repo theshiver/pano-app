@@ -89,8 +89,8 @@ struct PreviewPane: View {
     }
 
     @ViewBuilder private func textBody(for item: ClipListItem) -> some View {
-        if model.activeTransform == nil, item.kind == .code, let content = item.content,
-            let language = CodeHighlighter.detectLanguage(content)
+        if model.highlightCode, model.activeTransform == nil, item.kind == .code,
+            let content = item.content, let language = CodeHighlighter.detectLanguage(content)
         {
             Text(CodeText.highlighted(content, language: language))
         } else {

@@ -17,6 +17,8 @@ public final class PanelModel {
     }
     /// The transform whose chip is active in the preview, if any.
     public var activeTransformId: String?
+    /// Whether to syntax-highlight code and show the detected language (Settings).
+    public var highlightCode = true
     /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
     public var commandHeld: Bool = false
 

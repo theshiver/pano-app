@@ -9,6 +9,7 @@ struct ClipRow: View {
     let item: ClipListItem
     let isSelected: Bool
     var quickRank: Int? = nil
+    var showLanguage = true
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -67,7 +68,7 @@ struct ClipRow: View {
     private var metadata: String {
         var parts: [String] = []
         if item.isMasked { parts.append("not stored") }
-        if item.kind == .code, let content = item.content,
+        if showLanguage, item.kind == .code, let content = item.content,
             let language = CodeHighlighter.detectLanguage(content)
         {
             parts.append(language.rawValue)

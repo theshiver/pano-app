@@ -10,6 +10,7 @@ public struct SettingsView: View {
     private let onLaunchAtLoginChanged: (Bool) -> Void
     private let onHotKeyChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
+    private let onHighlightChanged: (Bool) -> Void
 
     public init(
         prefs: Preferences,
@@ -17,7 +18,8 @@ public struct SettingsView: View {
         onRetentionChanged: @escaping () -> Void,
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
         onHotKeyChanged: @escaping () -> Void,
-        onOCRChanged: @escaping (Bool) -> Void
+        onOCRChanged: @escaping (Bool) -> Void,
+        onHighlightChanged: @escaping (Bool) -> Void
     ) {
         self.prefs = prefs
         self.exclusion = exclusion
@@ -25,6 +27,7 @@ public struct SettingsView: View {
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
         self.onHotKeyChanged = onHotKeyChanged
         self.onOCRChanged = onOCRChanged
+        self.onHighlightChanged = onHighlightChanged
     }
 
     public var body: some View {
@@ -45,6 +48,15 @@ public struct SettingsView: View {
                         get: { prefs.ocrEnabled },
                         set: {
                             prefs.ocrEnabled = $0; onOCRChanged($0)
+                        }
+                    )
+                )
+                Toggle(
+                    "Syntax highlighting for code",
+                    isOn: Binding(
+                        get: { prefs.highlightCode },
+                        set: {
+                            prefs.highlightCode = $0; onHighlightChanged($0)
                         }
                     )
                 )

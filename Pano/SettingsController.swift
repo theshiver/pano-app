@@ -13,19 +13,22 @@ final class SettingsController {
     private let onHotKeyChanged: () -> Void
     private let onExclusionsChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
+    private let onHighlightChanged: (Bool) -> Void
     private var window: NSWindow?
     private var exclusion: ExclusionModel?
 
     init(
         prefs: Preferences, store: Store,
         onHotKeyChanged: @escaping () -> Void, onExclusionsChanged: @escaping () -> Void,
-        onOCRChanged: @escaping (Bool) -> Void
+        onOCRChanged: @escaping (Bool) -> Void,
+        onHighlightChanged: @escaping (Bool) -> Void
     ) {
         self.prefs = prefs
         self.store = store
         self.onHotKeyChanged = onHotKeyChanged
         self.onExclusionsChanged = onExclusionsChanged
         self.onOCRChanged = onOCRChanged
+        self.onHighlightChanged = onHighlightChanged
     }
 
     func show() {
@@ -61,7 +64,8 @@ final class SettingsController {
                 },
                 onLaunchAtLoginChanged: { Self.setLaunchAtLogin($0) },
                 onHotKeyChanged: onHotKeyChanged,
-                onOCRChanged: onOCRChanged
+                onOCRChanged: onOCRChanged,
+                onHighlightChanged: onHighlightChanged
             )
         )
         window.makeKeyAndOrderFront(nil)

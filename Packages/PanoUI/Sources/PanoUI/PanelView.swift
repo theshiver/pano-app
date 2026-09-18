@@ -104,7 +104,8 @@ public struct PanelView: View {
                         ClipRow(
                             item: item,
                             isSelected: item.id == model.selectedId,
-                            quickRank: model.commandHeld && index < 9 ? index + 1 : nil
+                            quickRank: model.commandHeld && index < 9 ? index + 1 : nil,
+                            showLanguage: model.highlightCode
                         )
                         .id(item.id)
                         .onTapGesture {
