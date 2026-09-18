@@ -1,8 +1,8 @@
 import Foundation
 
 /// Converts a colour between formats — the feature no competitor has (docs/01-product.md). Parses
-/// hex, `rgb()/rgba()`, `hsl()/hsla()`; emits hex, rgb, hsl and a SwiftUI `Color`. Each format is a
-/// separately pasteable row. Tailwind class mapping is a follow-up (it needs the full palette table).
+/// hex, `rgb()/rgba()`, `hsl()/hsla()`; emits hex, rgb, hsl, a SwiftUI `Color` and the nearest Tailwind
+/// class. Each format is a separately pasteable row.
 public struct ColourTransform: Transform {
     public let id = "colour"
     public let title = "Colour"
@@ -14,11 +14,13 @@ public struct ColourTransform: Transform {
 
     public func apply(_ input: String) throws -> TransformOutput {
         guard let colour = Colour(parsing: input) else { throw TransformError.notApplicable }
+        let tailwind = TailwindPalette.nearest(colour)
         let formats = [
             TransformOutput.Format("HEX", colour.hex),
             TransformOutput.Format("RGB", colour.rgb),
             TransformOutput.Format("HSL", colour.hsl),
             TransformOutput.Format("SwiftUI", colour.swiftUI),
+            TransformOutput.Format(tailwind.exact ? "Tailwind" : "Tailwind ≈", tailwind.name),
         ]
         return TransformOutput(colour.hex, formats: formats)
     }

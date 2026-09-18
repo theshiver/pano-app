@@ -35,12 +35,11 @@ public enum TransformError: Error, Equatable {
     case notApplicable
 }
 
-/// The registry the transform bar uses. `markdown` is intentionally absent until its behaviour is
-/// specified (the docs list it in the bar but do not define what it does).
+/// The registry the transform bar uses, in chip order.
 public enum Transforms {
     public static let all: [any Transform] = [
         JSONTransform(), Base64Transform(), JWTTransform(),
-        URLTransform(), SlugTransform(), CleanTransform(), ColourTransform(),
+        URLTransform(), SlugTransform(), MarkdownTransform(), CleanTransform(), ColourTransform(),
     ]
 
     /// The transforms whose chip should appear for this text, in bar order.

@@ -95,3 +95,21 @@ import Testing
     #expect(ids.contains("colour"))
     #expect(!ids.contains("json"))
 }
+
+@Test func colourMapsToNearestTailwindClass() throws {
+    let colour = ColourTransform()
+    let exact = try colour.apply("#3B82F6").formats  // blue-500
+    #expect(exact.contains(.init("Tailwind", "blue-500")))
+    let near = try colour.apply("#3B82F0").formats
+    #expect(near.contains(.init("Tailwind ≈", "blue-500")))
+    #expect(try colour.apply("#000").formats.contains(.init("Tailwind", "black")))
+}
+
+@Test func markdownStripsToPlainText() throws {
+    let md = MarkdownTransform()
+    let input = "# Title\n\nSome **bold** and `code` with a [link](https://x.y).\n\n- one\n- two\n"
+    #expect(md.applies(to: input))
+    #expect(try md.apply(input).text == "Title\nSome bold and code with a link.\none\ntwo")
+    #expect(!md.applies(to: "plain sentence, nothing to strip"))
+    #expect(!md.applies(to: "a * b"))
+}
