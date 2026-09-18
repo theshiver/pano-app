@@ -37,7 +37,8 @@ private func renderPNG(_ string: String) -> Data {
     ]
     (string as NSString).draw(at: NSPoint(x: 12, y: 28), withAttributes: attrs)
     image.unlockFocus()
-    let tiff = image.tiffRepresentation!
-    let rep = NSBitmapImageRep(data: tiff)!
-    return rep.representation(using: .png, properties: [:])!
+    guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+        let png = rep.representation(using: .png, properties: [:])
+    else { return Data() }
+    return png
 }
