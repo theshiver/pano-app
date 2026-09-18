@@ -1,11 +1,9 @@
 import PanoStore
 import SwiftUI
 
-/// The panel content: a slim rail placeholder, the search field over the result list, and the
-/// live preview, with the status bar underneath. Keyboard-first (docs/05-design.md): the search
-/// field owns first responder and drives selection with the arrow keys; ⏎ pastes, esc closes.
-///
-/// The source-app rail's filtering is week 7; it renders as a plain material column for now.
+/// The panel content: the source-app rail, the search field over the result list, and the live
+/// preview, with the status bar underneath. Keyboard-first (docs/05-design.md): the search field
+/// owns first responder and drives selection with the arrow keys; ⏎ pastes, esc closes.
 public struct PanelView: View {
     @State private var model: PanelModel
     @FocusState private var searchFocused: Bool
@@ -46,7 +44,7 @@ public struct PanelView: View {
     }
 
     private var rail: some View {
-        VStack { Spacer() }
+        AppRail(apps: model.apps, selectedAppId: model.selectedAppId, select: model.selectApp)
             .frame(width: Theme.railWidth)
             .frame(maxHeight: .infinity)
             .background(.thinMaterial)
@@ -81,6 +79,11 @@ public struct PanelView: View {
                         return .ignored
                     }
                     model.pasteRank(n)
+                    return .handled
+                }
+                .onKeyPress(characters: CharacterSet(charactersIn: "[]"), phases: .down) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    model.moveAppSelection(by: press.characters == "]" ? 1 : -1)
                     return .handled
                 }
                 .onKeyPress(characters: CharacterSet(charactersIn: "pP"), phases: .down) { press in
@@ -123,7 +126,7 @@ public struct PanelView: View {
     }
 
     @ViewBuilder private var emptyState: some View {
-        let searching = !model.query.trimmingCharacters(in: .whitespaces).isEmpty
+        let searching = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.selectedAppId != nil
         VStack(spacing: 6) {
             Image(systemName: searching ? "magnifyingglass" : "doc.on.clipboard")
                 .font(.system(size: 22))

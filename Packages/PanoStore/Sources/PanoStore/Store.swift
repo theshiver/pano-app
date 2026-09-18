@@ -101,6 +101,21 @@ public actor Store {
         }
     }
 
+    /// The apps clips came from, most recently copied-from first, for the rail (docs/05-design.md).
+    public func sourceApps(limit: Int = 12) throws -> [SourceApp] {
+        try dbQueue.read { db in
+            try SourceApp.fetchAll(
+                db,
+                sql: """
+                    SELECT source_bundle_id, MAX(source_name) AS source_name, COUNT(*) AS clip_count
+                    FROM clip WHERE source_bundle_id IS NOT NULL
+                    GROUP BY source_bundle_id ORDER BY MAX(last_seen_at) DESC LIMIT ?
+                    """,
+                arguments: [limit]
+            )
+        }
+    }
+
     /// Structured search: bare words hit the FTS index; `app:`/`type:`/`pinned:`/`>7d`/`<2h`
     /// become predicates (docs/02-architecture.md). Parsed to a `SearchQuery`, then SQL is built
     /// with bound parameters. A terms-only query keeps the fast top-N-rowids path (<2ms at 100k).

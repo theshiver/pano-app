@@ -224,3 +224,17 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(hits[0].content == "Invoice total 4242 TL")  // content filled for the row
     #expect(try await store.search("type:image 4242").count == 1)
 }
+
+@Test func sourceAppsAreGroupedMostRecentFirst() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let t0 = Date(timeIntervalSince1970: 1_000)
+    try await store.insert(text("a", bundle: "com.apple.Safari"), now: t0)
+    try await store.insert(text("b", bundle: "com.apple.Safari"), now: t0.addingTimeInterval(1))
+    try await store.insert(text("c", bundle: "com.apple.finder"), now: t0.addingTimeInterval(2))
+    try await store.insert(text("no source"), now: t0.addingTimeInterval(3))
+    let apps = try await store.sourceApps()
+    #expect(apps.map(\.bundleId) == ["com.apple.finder", "com.apple.Safari"])
+    #expect(apps.map(\.clipCount) == [1, 2])
+}

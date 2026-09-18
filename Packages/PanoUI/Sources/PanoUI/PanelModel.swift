@@ -9,6 +9,11 @@ import PanoTransforms
 @Observable
 public final class PanelModel {
     public private(set) var items: [ClipListItem] = []
+    /// The rail: apps clips came from, and the one currently filtering the list (nil = all).
+    public private(set) var apps: [SourceApp] = []
+    public private(set) var selectedAppId: String? {
+        didSet { if selectedAppId != oldValue { reload() } }
+    }
     public var query: String = "" {
         didSet { if query != oldValue { reload() } }
     }
@@ -35,6 +40,7 @@ public final class PanelModel {
     /// Called when the panel is shown: reset the query and load the newest clips, selecting the top.
     public func activate() {
         query = ""
+        selectedAppId = nil
         reload(selectTop: true)
     }
 
@@ -43,10 +49,14 @@ public final class PanelModel {
         // (docs/02-architecture.md), so strip it before searching.
         let (searchText, transformToken) = Self.splitTransformToken(query)
         reloadTask?.cancel()
+        let appId = selectedAppId
         reloadTask = Task {
-            let result = await fetch(searchText)
+            async let rail = (try? await store.sourceApps()) ?? []
+            let result = await fetch(appId.map { "app:\($0) " + searchText } ?? searchText)
             guard !Task.isCancelled else { return }
             items = result
+            apps = await rail
+            if let appId, !apps.contains(where: { $0.id == appId }) { selectedAppId = nil }
             if selectTop || selectedId == nil || !items.contains(where: { $0.id == selectedId }) {
                 selectedId = items.first?.id
             }
@@ -71,6 +81,21 @@ public final class PanelModel {
         let trimmed = query.trimmingCharacters(in: .whitespaces).lowercased()
         if transformIds.contains(trimmed) { return ("", trimmed) }
         return (query, nil)
+    }
+
+    // MARK: Rail
+
+    /// Tapping the active app's icon (or "All") clears the filter.
+    public func selectApp(_ bundleId: String?) {
+        selectedAppId = (selectedAppId == bundleId) ? nil : bundleId
+    }
+
+    /// ⌘] / ⌘[ walk the rail; before the first app is "All".
+    public func moveAppSelection(by delta: Int) {
+        guard !apps.isEmpty else { return }
+        let current = apps.firstIndex { $0.id == selectedAppId } ?? -1
+        let next = min(max(-1, current + delta), apps.count - 1)
+        selectedAppId = next < 0 ? nil : apps[next].id
     }
 
     // MARK: Transforms & selection
