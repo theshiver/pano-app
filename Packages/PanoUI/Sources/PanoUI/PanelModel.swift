@@ -15,6 +15,9 @@ public final class PanelModel {
         didSet { if selectedAppId != oldValue { reload() } }
     }
     public private(set) var pinboards: [Pinboard] = []
+    /// Whole-history figures for the status bar (the list itself is capped at 200 rows).
+    public private(set) var totalCount = 0
+    public private(set) var storageBytes: Int64 = 0
     public private(set) var selectedPinboardId: Int64? {
         didSet { if selectedPinboardId != oldValue { reload() } }
     }
@@ -60,11 +63,15 @@ public final class PanelModel {
         reloadTask = Task {
             async let rail = (try? await store.sourceApps(limit: 6)) ?? []  // leaves room for pinboards below
             async let boards = (try? await store.pinboards()) ?? []
+            async let total = (try? await store.count()) ?? 0
+            async let bytes = await store.storageBytes()
             let result = await fetch(appId.map { "app:\($0) " + searchText } ?? searchText, pinboardId: boardId)
             guard !Task.isCancelled else { return }
             items = result
             apps = await rail
             pinboards = await boards
+            totalCount = await total
+            storageBytes = await bytes
             if let appId, !apps.contains(where: { $0.id == appId }) { selectedAppId = nil }
             if selectTop || selectedId == nil || !items.contains(where: { $0.id == selectedId }) {
                 selectedId = items.first?.id

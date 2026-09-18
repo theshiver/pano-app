@@ -29,7 +29,10 @@ public struct PanelView: View {
                     .frame(maxWidth: .infinity)
             }
             Divider()
-            StatusBar(itemCount: model.items.count)
+            StatusBar(
+                shown: model.items.count, total: model.totalCount, bytes: model.storageBytes,
+                filtered: model.selectedAppId != nil || model.selectedPinboardId != nil
+                    || !model.query.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .frame(width: Theme.windowWidth, height: Theme.windowHeight)
         .background(.regularMaterial)
@@ -116,10 +119,11 @@ public struct PanelView: View {
                         )
                         .id(item.id)
                         .draggable(ClipDrag(item))
-                        .onTapGesture {
+                        .onTapGesture(count: 2) {  // double-click pastes; a single click only selects
                             model.select(item.id)
                             model.pasteSelected()
                         }
+                        .onTapGesture { model.select(item.id) }
                     }
                 }
                 .padding(6)

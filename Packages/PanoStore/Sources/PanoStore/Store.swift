@@ -222,6 +222,21 @@ public actor Store {
         try dbQueue.read { db in try Clip.fetchCount(db) }
     }
 
+    /// Bytes on disk: the database file (plus WAL) and every blob. For the status bar.
+    public func storageBytes() -> Int64 {
+        let fm = FileManager.default
+        let folder = blobsURL.deletingLastPathComponent()
+        var total: Int64 = 0
+        for name in ["pano.sqlite", "pano.sqlite-wal"] {
+            total += (try? fm.attributesOfItem(atPath: folder.appendingPathComponent(name).path)[.size] as? Int64) ?? 0
+        }
+        for name in (try? fm.contentsOfDirectory(atPath: blobsURL.path)) ?? [] {
+            total +=
+                (try? fm.attributesOfItem(atPath: blobsURL.appendingPathComponent(name).path)[.size] as? Int64) ?? 0
+        }
+        return total
+    }
+
     /// Updates the retention windows applied to future inserts. Existing `expires_at` values are
     /// left as they are; a rule change takes effect from the next copy, which is enough for v1.
     public func setRetention(_ rules: RetentionRules) {

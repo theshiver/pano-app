@@ -14,13 +14,12 @@ struct ClipRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 5)
-                .fill(dotColour)
+            kindBadge
                 .frame(width: Theme.dotSize, height: Theme.dotSize)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.isMasked ? "••••••••" : (item.content ?? placeholder))
+                Text(item.isMasked ? "••••••••" : firstLine)
                     .font(Theme.rowContent)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -57,6 +56,13 @@ struct ClipRow: View {
         .accessibilityLabel(accessibilityText)
     }
 
+    /// One line is all the row shows, so only that much is handed to layout (a 3000-line clip
+    /// would otherwise be measured in full on every render).
+    private var firstLine: String {
+        guard let content = item.content, !content.isEmpty else { return placeholder }
+        return String(content.prefix { $0 != "\n" }.prefix(200))
+    }
+
     private var placeholder: String {
         switch item.kind {
         case .image: return "Image"
@@ -69,7 +75,7 @@ struct ClipRow: View {
         var parts: [String] = []
         if item.isMasked { parts.append("not stored") }
         if showLanguage, item.kind == .code, let content = item.content,
-            let language = CodeHighlighter.detectLanguage(content)
+            let language = CodeHighlighter.detectLanguage(String(content.prefix(4000)))
         {
             parts.append(language.rawValue)
         }
@@ -83,22 +89,40 @@ struct ClipRow: View {
         "\(item.kind.rawValue), \(item.isMasked ? "hidden" : (item.content ?? placeholder)), \(metadata)"
     }
 
-    private var dotColour: Color {
+    /// A symbol per kind on a tinted tile, so the type reads at a glance; a colour clip shows the
+    /// colour itself.
+    @ViewBuilder private var kindBadge: some View {
+        if item.kind == .colour, let hex = item.content.flatMap({ try? ColourTransform().apply($0).text }),
+            let swatch = Color(hex: hex)
+        {
+            RoundedRectangle(cornerRadius: 5).fill(swatch)
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(.separator))
+        } else {
+            let (symbol, tint) = kindStyle
+            Image(systemName: symbol)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: Theme.dotSize, height: Theme.dotSize)
+                .background(RoundedRectangle(cornerRadius: 5).fill(tint.opacity(0.15)))
+        }
+    }
+
+    private var kindStyle: (String, Color) {
         switch item.kind {
-        case .url: return .blue
-        case .image: return .purple
-        case .file: return .orange
-        case .colour: return .pink
-        case .code: return .green
-        case .richtext: return .teal
-        case .text: return Theme.secondary(scheme)
+        case .url: return ("link", .blue)
+        case .image: return ("photo", .purple)
+        case .file: return ("doc", .orange)
+        case .colour: return ("paintpalette", .pink)
+        case .code: return ("chevron.left.forwardslash.chevron.right", .green)
+        case .richtext: return ("textformat", .teal)
+        case .text: return ("text.alignleft", Theme.secondary(scheme))
         }
     }
 
     static func age(_ date: Date) -> String {
         let seconds = Int(Date().timeIntervalSince(date))
         switch seconds {
-        case ..<60: return "\(max(1, seconds))s"
+        case ..<60: return "now"
         case ..<3600: return "\(seconds / 60)m"
         case ..<86400: return "\(seconds / 3600)h"
         default: return "\(seconds / 86400)d"

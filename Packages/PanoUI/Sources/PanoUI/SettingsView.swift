@@ -37,55 +37,20 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
+        TabView {
+            general.tabItem { Label("General", systemImage: "gearshape") }
+            history.tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+            privacy.tabItem { Label("Privacy", systemImage: "hand.raised") }
+        }
+        .frame(width: 460, height: 400)
+    }
+
+    // MARK: General — how the panel opens and what it shows
+
+    private var general: some View {
         Form {
-            Section("General") {
-                Toggle(
-                    "Launch Pano at login",
-                    isOn: Binding(
-                        get: { prefs.launchAtLogin },
-                        set: {
-                            prefs.launchAtLogin = $0; onLaunchAtLoginChanged($0)
-                        }
-                    )
-                )
-                Toggle(
-                    "Read text in images (OCR)",
-                    isOn: Binding(
-                        get: { prefs.ocrEnabled },
-                        set: {
-                            prefs.ocrEnabled = $0; onOCRChanged($0)
-                        }
-                    )
-                )
-                Toggle(
-                    "Syntax highlighting for code",
-                    isOn: Binding(
-                        get: { prefs.highlightCode },
-                        set: {
-                            prefs.highlightCode = $0; onHighlightChanged($0)
-                        }
-                    )
-                )
-                if prefs.highlightCode {
-                    Picker(
-                        "Code theme",
-                        selection: Binding(
-                            get: { prefs.syntaxTheme },
-                            set: {
-                                prefs.syntaxTheme = $0; onThemeChanged($0)
-                            }
-                        )
-                    ) {
-                        ForEach(Preferences.syntaxThemes, id: \.id) { theme in
-                            Text(theme.label).tag(theme.id)
-                        }
-                    }
-                }
-                Picker("Panel position", selection: $prefs.panelPosition) {
-                    Text("Near the cursor").tag(PanelPosition.nearCursor)
-                    Text("Centre of the active screen").tag(PanelPosition.activeScreenCentre)
-                }
-                LabeledContent("Open shortcut") {
+            Section("Panel") {
+                LabeledContent("Open with") {
                     HotKeyRecorderField(display: prefs.hotKeyDisplay) { code, modifiers, display in
                         prefs.hotKeyCode = code
                         prefs.hotKeyModifiers = modifiers
@@ -94,49 +59,82 @@ public struct SettingsView: View {
                     }
                     .frame(width: 120, height: 22)
                 }
+                Picker("Appears", selection: $prefs.panelPosition) {
+                    Text("Near the cursor").tag(PanelPosition.nearCursor)
+                    Text("Centred on the active screen").tag(PanelPosition.activeScreenCentre)
+                }
+                Toggle("Launch Pano at login", isOn: toggle(\.launchAtLogin, onLaunchAtLoginChanged))
             }
-
-            Section("History retention") {
-                Stepper(
-                    "Sensitive items: \(prefs.retentionSecretHours) hour\(prefs.retentionSecretHours == 1 ? "" : "s")",
-                    value: retentionBinding(\.retentionSecretHours), in: 1...72
-                )
-                Stepper(
-                    "Images: \(prefs.retentionImageDays) day\(prefs.retentionImageDays == 1 ? "" : "s")",
-                    value: retentionBinding(\.retentionImageDays), in: 1...90
-                )
-                Stepper(
-                    "Everything else: \(prefs.retentionOtherDays) day\(prefs.retentionOtherDays == 1 ? "" : "s")",
-                    value: retentionBinding(\.retentionOtherDays), in: 1...365
-                )
-                Text("Pinned items and items on a pinboard are always kept, regardless of these limits.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+            Section("Content") {
+                Toggle("Highlight code", isOn: toggle(\.highlightCode, onHighlightChanged))
+                if prefs.highlightCode {
+                    Picker(
+                        "Theme",
+                        selection: Binding(
+                            get: { prefs.syntaxTheme },
+                            set: {
+                                prefs.syntaxTheme = $0
+                                onThemeChanged($0)
+                            })
+                    ) {
+                        ForEach(Preferences.syntaxThemes, id: \.id) { theme in
+                            Text(theme.label).tag(theme.id)
+                        }
+                    }
+                }
+                Toggle("Read text in images", isOn: toggle(\.ocrEnabled, onOCRChanged))
+                note("Makes screenshots searchable. Uses macOS Vision on your Mac; nothing leaves it.")
             }
+        }
+        .formStyle(.grouped)
+    }
 
-            Section("Secrets") {
-                Toggle(
-                    "Detect and mask secrets",
-                    isOn: Binding(
-                        get: { prefs.maskSecrets },
+    // MARK: History — one question: how long to keep things
+
+    private static let keepOptions: [(days: Int, label: String)] = [
+        (1, "1 day"), (7, "1 week"), (30, "1 month"), (90, "3 months"), (365, "1 year"),
+    ]
+
+    private var history: some View {
+        Form {
+            Section {
+                Picker(
+                    "Keep items for",
+                    selection: Binding(
+                        get: { prefs.retentionOtherDays },
                         set: {
-                            prefs.maskSecrets = $0
-                            onMaskSecretsChanged($0)
+                            prefs.retentionOtherDays = $0
+                            prefs.retentionImageDays = $0
+                            onRetentionChanged()
                         })
-                )
-                Text(
-                    "Text that looks like an API key, token, card or IBAN number is hidden in the list and preview "
-                        + "and expires after the sensitive-items window. Off by default; detection is local and rule-based."
-                )
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                ) {
+                    ForEach(Self.keepOptions, id: \.days) { option in
+                        Text(option.label).tag(option.days)
+                    }
+                    if !Self.keepOptions.contains(where: { $0.days == prefs.retentionOtherDays }) {
+                        Text("\(prefs.retentionOtherDays) days").tag(prefs.retentionOtherDays)
+                    }
+                }
+                note("Older items are removed automatically. Pinned items and anything on a pinboard are kept forever.")
             }
+        }
+        .formStyle(.grouped)
+    }
 
+    // MARK: Privacy — what never gets recorded
+
+    private var privacy: some View {
+        Form {
+            Section("Secrets") {
+                Toggle("Hide things that look like secrets", isOn: toggle(\.maskSecrets, onMaskSecretsChanged))
+                note(
+                    "API keys, tokens, card and IBAN numbers are shown as •••• and removed after "
+                        + "\(prefs.retentionSecretHours) hour\(prefs.retentionSecretHours == 1 ? "" : "s"). "
+                        + "Detection is rule-based and runs on your Mac.")
+            }
             Section("Excluded apps") {
                 if exclusion.apps.isEmpty {
-                    Text("Nothing copied from an excluded app is ever recorded.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    note("Nothing copied from an excluded app is ever recorded. Add your password manager here.")
                 } else {
                     ForEach(exclusion.apps) { app in
                         HStack {
@@ -156,15 +154,23 @@ public struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 460)
     }
 
-    private func retentionBinding(_ keyPath: ReferenceWritableKeyPath<Preferences, Int>) -> Binding<Int> {
+    // MARK: Helpers
+
+    private func note(_ text: String) -> some View {
+        Text(text).font(.system(size: 11)).foregroundStyle(.secondary)
+    }
+
+    /// A toggle bound to a preference that also notifies the app of the change.
+    private func toggle(_ keyPath: ReferenceWritableKeyPath<Preferences, Bool>, _ changed: @escaping (Bool) -> Void)
+        -> Binding<Bool>
+    {
         Binding(
             get: { prefs[keyPath: keyPath] },
             set: {
-                prefs[keyPath: keyPath] = $0; onRetentionChanged()
-            }
-        )
+                prefs[keyPath: keyPath] = $0
+                changed($0)
+            })
     }
 }

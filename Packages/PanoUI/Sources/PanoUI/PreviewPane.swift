@@ -7,6 +7,8 @@ import SwiftUI
 struct PreviewPane: View {
     @Bindable var model: PanelModel
     @Environment(\.colorScheme) private var scheme
+    /// The last highlight result and the clip/theme it belongs to; computed off the main actor.
+    @State private var highlighted: (id: Int64, theme: String, result: CodeText.Result)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -76,19 +78,31 @@ struct PreviewPane: View {
         } else if let output = model.transformOutput, !output.formats.isEmpty {
             colourFormats(output.formats)
         } else {
-            let code = highlightedCode(for: item)
+            let wantsCode = wantsHighlight(item)
+            let code =
+                wantsCode && highlighted?.id == item.id && highlighted?.theme == model.syntaxTheme
+                ? highlighted?.result : nil
+            let preview = CodeText.preview(model.transformOutput?.text ?? item.content ?? "—")
             ScrollView {
-                Group {
-                    if let code {
-                        Text(code.text)
-                    } else if let html = model.transformOutput?.html, let rich = RichPreview.attributed(html: html) {
-                        Text(rich)
-                    } else {
-                        Text(model.transformOutput?.text ?? item.content ?? "—")
-                            .font(Theme.previewBody)
+                VStack(alignment: .leading, spacing: 8) {
+                    Group {
+                        if let code {
+                            Text(code.text)
+                        } else if let html = model.transformOutput?.html, let rich = RichPreview.attributed(html: html)
+                        {
+                            Text(rich)
+                        } else {
+                            Text(preview.text)
+                                .font(Theme.previewBody)
+                        }
+                    }
+                    .textSelection(.enabled)
+                    if preview.cutLines > 0 {
+                        Text("… \(preview.cutLines) more lines — the whole clip pastes")
+                            .font(Theme.rowMeta)
+                            .foregroundStyle(Theme.secondary(scheme))
                     }
                 }
-                .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
             }
@@ -96,15 +110,21 @@ struct PreviewPane: View {
             .transition(.opacity)
             .id(model.activeTransformId ?? "raw")
             .animation(.easeInOut(duration: 0.09), value: model.activeTransformId)
+            .task(id: "\(item.id)-\(model.syntaxTheme)-\(wantsCode)") {
+                guard wantsCode, let content = item.content else { return }
+                let (text, _) = CodeText.preview(content)
+                let language = CodeHighlighter.detectLanguage(String(text.prefix(4000)))
+                let theme = model.syntaxTheme
+                guard let result = await CodeText.shared.highlight(text, language: language, theme: theme) else {
+                    return
+                }
+                if !Task.isCancelled { highlighted = (item.id, theme, result) }
+            }
         }
     }
 
-    private func highlightedCode(for item: ClipListItem) -> CodeText.Result? {
-        guard model.highlightCode, model.activeTransform == nil, item.kind == .code,
-            let content = item.content
-        else { return nil }
-        return CodeText.highlight(
-            content, language: CodeHighlighter.detectLanguage(content), theme: model.syntaxTheme)
+    private func wantsHighlight(_ item: ClipListItem) -> Bool {
+        model.highlightCode && model.activeTransform == nil && item.kind == .code && item.content != nil
     }
 
     /// A colour's formats: a large swatch, then one pasteable row per representation.
