@@ -6,7 +6,7 @@ Read this file completely before doing anything in this repo.
 
 A free, open-source clipboard manager for macOS. **Local only**: no sync, no cloud,
 no account, no telemetry, no network code at all. Distributed free on the Mac App
-Store, plus a notarized DMG and a Homebrew cask. MIT licensed.
+Store only; no DMG, no Homebrew cask, no binaries on GitHub. MIT licensed.
 
 One-line promise: *as fast as Maccy, as good-looking as Paste, completely free, and
 the data never leaves the Mac.*
