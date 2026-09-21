@@ -178,7 +178,7 @@ public final class PanelModel {
 
     public func createPinboard(name: String, colour: String, icon: String?) {
         Task {
-            try? await store.createPinboard(name: name, colour: colour, icon: icon)
+            _ = try? await store.createPinboard(name: name, colour: colour, icon: icon)
             reload()
         }
     }

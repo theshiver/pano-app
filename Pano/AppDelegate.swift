@@ -38,12 +38,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let engine = CaptureEngine(store: store)
         self.engine = engine
-        Task {
+        Task { [weak self] in
             await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? [])
             await engine.setOCREnabled(prefs.ocrEnabled)
             await engine.setMaskSecrets(prefs.maskSecrets)
             await engine.setOnChange { [weak self] in
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     guard let self, self.panel?.isVisible == true else { return }
                     self.model?.reload()
                 }
@@ -216,7 +216,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task { @MainActor in
-            try? await store?.clearHistory()
+            _ = try? await store?.clearHistory()
             model?.reload()
         }
     }

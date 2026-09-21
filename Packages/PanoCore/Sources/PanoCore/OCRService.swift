@@ -16,7 +16,7 @@ public enum OCRService {
                 let handler = VNImageRequestHandler(data: imageData, options: [:])
                 try? handler.perform([request])
 
-                let text = (request.results as? [VNRecognizedTextObservation])?
+                let text = request.results?
                     .compactMap { $0.topCandidates(1).first?.string }
                     .joined(separator: "\n")
                 continuation.resume(returning: (text?.isEmpty == false) ? text : nil)

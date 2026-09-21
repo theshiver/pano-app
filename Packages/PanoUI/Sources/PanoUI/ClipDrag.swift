@@ -20,14 +20,9 @@ struct ClipDrag: Codable, Transferable {
     }
 
     static var transferRepresentation: some TransferRepresentation {
-        ProxyRepresentation { drag in
-            let data = await payload(drag.id).first { $0.uti == "public.file-url" }?.data
-            guard let url = data.flatMap({ URL(dataRepresentation: $0, relativeTo: nil) }) else {
-                throw CocoaError(.fileNoSuchFile)
-            }
-            return url
-        }
-        .exportingCondition { $0.kind == .file }
+        // The stored public.file-url bytes go out as-is; ProxyRepresentation's async exporter is deprecated.
+        DataRepresentation(exportedContentType: .fileURL) { drag in try await imageBytes(drag.id, "public.file-url") }
+            .exportingCondition { $0.kind == .file }
         DataRepresentation(exportedContentType: .png) { drag in try await imageBytes(drag.id, "public.png") }
             .exportingCondition { $0.kind == .image }
         DataRepresentation(exportedContentType: .tiff) { drag in try await imageBytes(drag.id, "public.tiff") }
@@ -39,7 +34,7 @@ struct ClipDrag: Codable, Transferable {
         CodableRepresentation(contentType: .panoClip)  // last: internal only, pinboards match it by type
     }
 
-    private static func imageBytes(_ id: Int64, _ uti: String) async throws -> Data {
+    private static func imageBytes(_ id: Int64, _ uti: String) async throws -> Data {  // any stored representation
         guard let data = await payload(id).first(where: { $0.uti == uti })?.data else {
             throw CocoaError(.fileNoSuchFile)
         }
