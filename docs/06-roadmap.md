@@ -77,7 +77,7 @@ permission flow experienced end to end, the name reserved.
 - Accessibility pass: VoiceOver, keyboard focus, contrast
 - Empty states, error states, first-run flow
 - Landing page, README, contributing guide, tip link
-- App Store submission, notarized DMG, Homebrew cask
+- App Store submission (Xcode Cloud from the release tag)
 
 **Exit:** a stranger can install it and use it without asking anyone anything.
 

@@ -50,8 +50,8 @@ Pano needs two permissions, both asked for by macOS and both revocable:
 
 ## Install
 
-Not released yet. It will be available on the Mac App Store (free), as a
-notarized DMG, and via `brew install --cask pano`. Follow
+Not released yet. It will be available on the Mac App Store, free. That is the
+only official build; GitHub releases carry no binaries. Follow
 [pano-app.com](https://pano-app.com) for the release.
 
 ## Build
