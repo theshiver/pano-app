@@ -30,6 +30,13 @@ public struct PanelView: View {
                 PreviewPane(model: model)
                     .frame(maxWidth: .infinity)
             }
+            // A half-strength window-colour wash under the list and preview only: the blur still
+            // shows through, but text no longer sits directly on whatever saturated window is behind.
+            .background(alignment: .trailing) {
+                Color(nsColor: .windowBackgroundColor)
+                    .opacity(scheme == .dark ? 0.55 : 0.5)
+                    .frame(width: Theme.windowWidth - Theme.railWidth)
+            }
             Divider()
             StatusBar(
                 shown: model.items.count, total: model.totalCount, bytes: model.storageBytes,
