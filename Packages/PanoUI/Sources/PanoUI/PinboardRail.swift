@@ -97,6 +97,7 @@ private struct NewPinboardForm: View {
                         .frame(width: 18, height: 18)
                         .overlay(Circle().strokeBorder(.primary, lineWidth: colour == c ? 2 : 0))
                         .onTapGesture { colour = c }
+                        .pointer()
                         .accessibilityLabel("Colour \(c)")
                         .accessibilityAddTraits(colour == c ? [.isSelected] : [])
                 }
@@ -109,6 +110,7 @@ private struct NewPinboardForm: View {
                             icon == i ? Theme.accent.opacity(0.2) : Color.clear, in: RoundedRectangle(cornerRadius: 5)
                         )
                         .onTapGesture { icon = i }
+                        .pointer()
                         .accessibilityLabel("Icon \(i)")
                         .accessibilityAddTraits(icon == i ? [.isSelected] : [])
                 }
@@ -116,6 +118,7 @@ private struct NewPinboardForm: View {
             Button("Create", action: submit)
                 .keyboardShortcut(.defaultAction)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .pointer()
         }
         .padding(12)
         .frame(width: 240)

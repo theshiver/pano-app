@@ -3,7 +3,20 @@ import SwiftUI
 
 /// Renders a transform's HTML (Markdown) in the preview via AppKit's HTML importer. The importer's
 /// hard-coded text colours are stripped so the result follows the panel's light/dark scheme.
-enum RichPreview {
+public enum RichPreview {
+    /// Parses a throwaway document of each kind so the first real preview does not pay for the
+    /// importer starting up.
+    ///
+    /// Measured on macOS 27: the first call into AppKit's HTML importer costs ~330 ms and every one
+    /// after it ~5 ms — it is bringing WebKit up. The importer is main-thread-only, so that 330 ms
+    /// lands on the main thread wherever it happens. At launch the app is a menu-bar accessory with
+    /// nothing on screen and nobody notices; on the first panel open it *was* the slow first open.
+    @MainActor
+    public static func prewarm() {
+        _ = attributed(html: "<p>a</p>")
+        _ = NSAttributedString(rtf: Data("{\\rtf1\\ansi a}".utf8), documentAttributes: nil)
+    }
+
     /// A rich-text clip's own RTF (preferred) or HTML representation, ready for `Text`.
     static func attributed(payload: [(uti: String, data: Data)]) -> AttributedString? {
         if let rtf = payload.first(where: { $0.uti == "public.rtf" })?.data,

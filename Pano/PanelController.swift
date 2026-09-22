@@ -1,4 +1,5 @@
 import AppKit
+import PanoCore
 import PanoUI
 import SwiftUI
 
@@ -44,9 +45,12 @@ final class PanelController {
 
     func show() {
         installKeyMonitor()
+        model?.setAccessibilityTrusted(PasteService.isAccessibilityTrusted)  // may have been revoked
         positionNearCursor()
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
+        model?.requestSearchFocus()  // only now can the field take it: the panel is key
+        model?.activate()  // fresh query, no stale filter: "opened" is here, not in the view's onAppear
         // 140 ms open, slight fade (docs/05-design.md). Reduce Motion collapses it to instant.
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         NSAnimationContext.runAnimationGroup { context in

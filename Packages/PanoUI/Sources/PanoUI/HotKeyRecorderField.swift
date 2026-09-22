@@ -55,6 +55,12 @@ public struct HotKeyRecorderField: NSViewRepresentable {
 
         public override var acceptsFirstResponder: Bool { true }
 
+        /// `pointerStyle` is a SwiftUI modifier and cannot reach inside an `NSViewRepresentable`, so
+        /// this button asks AppKit for the hand cursor directly.
+        public override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .pointingHand)
+        }
+
         public override func keyDown(with event: NSEvent) {
             guard recording else {
                 super.keyDown(with: event)

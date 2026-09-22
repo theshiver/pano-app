@@ -1,3 +1,5 @@
+import AppKit
+import PanoCore
 import SwiftUI
 
 /// The preferences window. Binds to `Preferences` (persisted in UserDefaults); the side-effectful
@@ -5,6 +7,10 @@ import SwiftUI
 /// through the injected closures so PanoUI stays free of the store and ServiceManagement.
 public struct SettingsView: View {
     @Bindable private var prefs: Preferences
+    /// Whether macOS currently allows the ⌘V keystroke. Re-read when Pano is activated, which is
+    /// exactly when the user comes back from flipping the switch in System Settings; polling would
+    /// buy nothing.
+    @State private var trusted = false
     private let exclusion: ExclusionModel
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
@@ -47,6 +53,10 @@ public struct SettingsView: View {
             about.tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 460, height: 400)
+        .onAppear { trusted = PasteService.isAccessibilityTrusted }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            trusted = PasteService.isAccessibilityTrusted
+        }
     }
 
     // MARK: General — how the panel opens and what it shows
@@ -67,6 +77,7 @@ public struct SettingsView: View {
                     Text("Near the cursor").tag(PanelPosition.nearCursor)
                     Text("Centred on the active screen").tag(PanelPosition.activeScreenCentre)
                 }
+                autoPaste
                 Toggle("Launch Pano at login", isOn: toggle(\.launchAtLogin, onLaunchAtLoginChanged))
                 Toggle("Show icon in the menu bar", isOn: toggle(\.showMenuBarIcon, onMenuBarIconChanged))
                 if !prefs.showMenuBarIcon {
@@ -156,11 +167,12 @@ public struct SettingsView: View {
                                 Image(systemName: "minus.circle")
                             }
                             .buttonStyle(.borderless)
+                            .pointer()
                             .accessibilityLabel("Remove \(app.displayName)")
                         }
                     }
                 }
-                Button("Add App…") { exclusion.add() }
+                Button("Add App…") { exclusion.add() }.pointer()
             }
         }
         .formStyle(.grouped)
@@ -178,14 +190,12 @@ public struct SettingsView: View {
                         Text("Clipboard manager for macOS").foregroundStyle(.secondary)
                     }
                 }
-                LabeledContent("Version", value: Preferences.versionString)
+                LabeledContent("Version", value: Preferences.marketingVersion)
                 LabeledContent("Developer", value: "Can Çetin")
-                LabeledContent("Licence", value: "MIT, open source")
-                LabeledContent("Source") {
-                    Link("github.com/theshiver/pano-app", destination: Self.sourceURL)
-                }
+                // Licence and Source are hidden while the repository is private: linking people to
+                // a 404 is worse than saying nothing. Put both back when it is opened.
                 LabeledContent("Website") {
-                    Link("pano-app.com", destination: Self.websiteURL)
+                    Link("pano-app.com", destination: Self.websiteURL).pointer()
                 }
             }
             Section {
@@ -195,8 +205,37 @@ public struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    private static let sourceURL = URL(string: "https://github.com/theshiver/pano-app") ?? URL(fileURLWithPath: "/")
     private static let websiteURL = URL(string: "https://pano-app.com") ?? URL(fileURLWithPath: "/")
+
+    // MARK: Paste automatically
+
+    /// Off by default, and the only place in the app that asks macOS for permission to send the ⌘V
+    /// keystroke — turning this on is what raises the prompt (docs/adr/0003). Left off, ⏎ only puts
+    /// the clip on the clipboard, which is the whole app minus one keystroke.
+    @ViewBuilder private var autoPaste: some View {
+        Toggle(
+            "Paste automatically",
+            isOn: Binding(
+                get: { prefs.autoPaste },
+                set: { on in
+                    prefs.autoPaste = on
+                    // The prompt only appears when the app actually posts an event, so asking is
+                    // posting one. Nothing else in Pano calls this.
+                    if on && !trusted { PasteService.triggerAccessibilityPrompt() }
+                    trusted = PasteService.isAccessibilityTrusted
+                }))
+        if prefs.autoPaste && !trusted {
+            note(
+                "macOS has not allowed the keystroke yet. Turn Pano on in System Settings, under "
+                    + "Privacy & Security. Until then ⏎ copies and you press ⌘V yourself."
+            )
+            Button("Open System Settings") { PasteService.openSettingsPane() }
+                .pointer()
+                .accessibilityLabel("Open System Settings to allow Pano to send the paste keystroke")
+        } else if !prefs.autoPaste {
+            note("⏎ copies the clip; you press ⌘V. Turn this on and Pano sends the ⌘V for you.")
+        }
+    }
 
     // MARK: Helpers
 

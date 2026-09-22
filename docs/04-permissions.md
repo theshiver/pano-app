@@ -108,17 +108,47 @@ sees the change and moves it to the top of history.
 
 Measured: `CGEvent.post` returns in 1–17 ms.
 
-### Auto-paste must be optional
+### Auto-paste is opt-in
 
-Build it as a setting, default on, that degrades:
+**Changed 2026-09-22, after App Review rejected 1.0 (3) under guideline 2.4.5.**
+The first two rules below were written here from the start and were never
+implemented; the reviewer met an app that demanded the permission on first run
+and offered no way to turn the feature off. See `adr/0003`, addendum.
 
-- Permission not granted, or the setting is off → put the item on the pasteboard,
-  hide the panel, show a brief hint to press ⌘V. The app is still useful.
-- Never block launch, onboarding or any other feature on this permission.
+Settings → General → Panel → **Paste automatically**, `Preferences.autoPaste`,
+**default off**:
 
-This is not a fallback plan, it is the correct design. It also means a review
-rejection on auto-paste can be answered by shipping with the setting off rather
-than by pulling the app.
+- Off (the default) → `PasteService.paste(_:auto:)` writes the pasteboard and
+  returns. **No `CGEvent` is posted, so macOS never raises the "would like to
+  control this Mac" prompt.** The preview footer says `⏎ copy … then ⌘V in your
+  app` instead of `⏎ paste`.
+- On but not trusted → the post happens and does nothing; Settings shows the
+  banner and the deep link. The footer still says `copy`, because
+  `PanelModel.willAutoPaste` is `autoPaste && isAccessibilityTrusted`.
+- On and trusted → ⌘V is posted, as before.
+
+Two invariants, both load-bearing for review:
+
+1. **`PasteService.triggerAccessibilityPrompt()` has exactly one caller path:
+   the user turning the setting on** (the Settings toggle, or "Turn on" in
+   onboarding, which sets the same preference). Nothing else in the app may call
+   it. Adding a second caller is what the rejection was about.
+2. **Onboarding is not a permission gate.** It is shown once per install
+   (`Preferences.hasSeenOnboarding`), regardless of permission state, and its
+   ⏎ dismisses the window — it must never be the key that grants a permission.
+   `.keyboardShortcut(.defaultAction)` on the dismiss button is not sufficient
+   on its own: a *focused* button is activated by Return and Space regardless,
+   so the window also pins initial focus to dismiss with `.defaultFocus`.
+3. **An ⏎ that does not reach the other app must say so.** `PasteService.paste`
+   returns whether the keystroke is expected to have landed; `false` makes
+   `PasteHintController` show a card saying the clip is on the clipboard, with
+   the offer to turn auto-paste on. Without it the panel just vanishes and
+   nothing happens where the user is looking, which reads as a broken app —
+   the footer text alone is too quiet to carry this. The card stops appearing
+   once the user answers "Don't remind me"
+   (`Preferences.autoPasteHintDismissed`).
+
+Never block launch, onboarding or any other feature on this permission.
 
 ## Verifying before building
 

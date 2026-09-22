@@ -6,4 +6,30 @@ All notable changes to Pano are recorded here. The format follows
 
 ## [Unreleased]
 
-Nothing released yet. Work in progress — see `docs/06-roadmap.md`.
+## [1.0] - 2026-09-22
+
+First release.
+
+### Added
+
+- Unlimited clipboard history in a local SQLite file, with instant full-text
+  search and filters (`type:`, `app:`, `pinned:`, age such as `7d`).
+- A keyboard-first panel on ⌘⇧V: type to search, ⏎ to take a clip, ⇧⏎ for the
+  plain-text version, ⌘1–9 for quick picks, ⌘P to pin, ⌘⌫ to delete.
+- Transforms that run as you type: `json`, `b64`, `jwt`, `slug`, `url`, `clean`,
+  `markdown`, and colour conversions including a Tailwind match.
+- On-device OCR, so text inside copied images is searchable.
+- A rail of source apps, pinboards for clips worth keeping, and drag-out.
+- Secret detection (API keys, JWTs, card numbers, IBANs) with optional masking
+  and a shorter retention window; anything marked concealed is never recorded.
+- Per-app exclusions, retention rules, a recordable global shortcut, syntax
+  themes, and launch at login.
+
+### Notes
+
+- Everything stays on the Mac. The app ships without the network entitlement
+  and collects nothing.
+- "Paste automatically" — sending ⌘V to the app you came from — is **off by
+  default**. While it is off Pano posts no synthetic events, so macOS never asks
+  for permission; ⏎ puts the clip on the clipboard and the panel says to press
+  ⌘V. Turning the setting on is the only thing that raises the prompt.

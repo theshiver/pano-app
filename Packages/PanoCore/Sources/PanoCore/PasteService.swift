@@ -8,17 +8,28 @@ import PanoStore
 /// The caller hides the panel first so the previous app regains key focus, then calls `paste`.
 @MainActor
 public enum PasteService {
-    /// Writes the representations and posts ⌘V after a short delay that lets focus settle on the
-    /// previous app. The post is **unconditional**: on macOS 26/27 the "would like to control this
-    /// Mac" prompt only appears when the app actually posts an event, so guarding on
-    /// `AXIsProcessTrusted()` would mean the user is never asked and can never grant (docs/adr/0003).
-    /// Returns whether Accessibility is currently trusted, for the caller's own messaging.
+    /// Writes the representations to the pasteboard, and — only when `auto` is true — posts ⌘V after
+    /// a short delay that lets focus settle on the previous app.
+    ///
+    /// `auto` is the user's "Paste automatically" preference, which is off until they turn it on.
+    /// While it is off this posts no events at all, so macOS never raises the "would like to control
+    /// this Mac" prompt and the clip simply becomes the clipboard for the user to paste themselves.
+    ///
+    /// When it is on, the post is unconditional — it is *not* guarded on `AXIsProcessTrusted()`,
+    /// because on macOS 26/27 that prompt only appears when the app actually posts an event, so
+    /// guarding on trust would mean the user is never asked and can never grant (docs/adr/0003).
+    ///
+    /// Returns whether the keystroke is expected to have landed in the other app. **False means the
+    /// clip is only on the clipboard and the caller owes the user a visible explanation** — an ⏎
+    /// that silently does nothing reads as a broken app.
     @discardableResult
     public static func paste(
         _ payload: [(uti: String, data: Data)],
+        auto: Bool,
         settleDelay: Duration = .milliseconds(50)
     ) async -> Bool {
         write(payload)
+        guard auto else { return false }
         try? await Task.sleep(for: settleDelay)
         postCommandV()
         return AXIsProcessTrusted()
@@ -50,9 +61,14 @@ public enum PasteService {
     }
 
     /// Posts a harmless synthetic event (a mouse-move to the current location) so macOS raises the
-    /// "would like to control this Mac" prompt and adds Pano to the Accessibility list. On macOS
-    /// 26/27 that prompt only appears when the app actually posts an event, so onboarding calls this
-    /// rather than an AX permission API (which does not prompt — docs/adr/0003).
+    /// "would like to control this Mac" prompt and lists Pano in Device Control and Data Access. On
+    /// macOS 26/27 that prompt only appears when the app actually posts an event, so this is how the
+    /// permission is requested rather than an AX permission API (which does not prompt —
+    /// docs/adr/0003).
+    ///
+    /// **Only ever called from the user turning "Paste automatically" on.** Nothing else in the app
+    /// may call it: an app that raises this prompt before the user asks for the feature is exactly
+    /// what the 1.0 (3) review rejected.
     public static func triggerAccessibilityPrompt() {
         let source = CGEventSource(stateID: .combinedSessionState)
         let location = CGEvent(source: nil)?.location ?? .zero
@@ -66,6 +82,13 @@ public enum PasteService {
     }
 
     public static var isAccessibilityTrusted: Bool { AXIsProcessTrusted() }
+
+    /// Opens the System Settings pane holding the switch. macOS 26/27 labels it "Device Control and
+    /// Data Access"; the URL is still the old Accessibility one (verified on macOS 27.0).
+    public static func openSettingsPane() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        if let url { NSWorkspace.shared.open(url) }
+    }
 
     static func postCommandV() {
         let source = CGEventSource(stateID: .combinedSessionState)

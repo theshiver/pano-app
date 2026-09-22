@@ -92,3 +92,42 @@ Do what Maccy does.
 Technical claims about macOS entitlements and review behaviour go in an ADR
 only with a source: a header, a log line, a shipping app's entitlements file, or
 a measurement. "A developer was rejected for X" without a link is a rumour.
+
+## Addendum — 2026-09-22: rejected under 2.4.5, auto-paste becomes opt-in
+
+App Review rejected 1.0 (3) on 2026-09-21 under guideline 2.4.5: *"The app
+requests access to Accessibility features on macOS but does not use these
+features for accessibility purposes."* The attached screenshot was our own
+onboarding window.
+
+**What the decision above got right and kept:** the mechanism. `CGEvent.post`
+with only `app-sandbox` in the entitlements is still the choice; nothing here
+moves to Apple Events, and no entitlement is added.
+
+**What was wrong was not the mechanism, it was that the app demanded it.** Three
+things the consequences section of this ADR and `04-permissions.md` both
+promised, and which were never built:
+
+| Promised | Shipped in 1.0 (3) |
+|---|---|
+| "a switchable feature that degrades to manual ⌘V" | No setting existed anywhere; `PasteService.paste` posted ⌘V unconditionally |
+| "shows a hint to press ⌘V" | `paste` returned the trust state; `AppDelegate` discarded it and showed nothing |
+| "a review rejection costs a default setting" | There was no default to change |
+
+So on first launch the app opened a window whose second row read *"Needs
+Accessibility, so Pano can press ⌘V in the app you were in"*, with the grant
+button bound to ⏎. The reviewer did not have to look for the violation.
+
+**Change:** `Preferences.autoPaste`, default **off**; `paste(_:auto:)` posts
+nothing when it is off; the preview footer says `copy` rather than `paste` when
+⏎ will not reach the other app; onboarding shows once per install and offers the
+feature instead of requiring it. Rules and invariants in `04-permissions.md`.
+
+**Cost:** out of the box ⏎ is one keystroke short of the promise in the App Store
+description, and that description needs rewriting either way
+(`ops/appstore/metadata-1.0.md`).
+
+**Still open:** whether this is enough for 2.4.5, or whether the Mac App Store
+build has to drop the feature entirely. Not decided here. If it is dropped it is
+a compile-time removal, not a default — a setting a reviewer can find and switch
+on is the same rejection again.

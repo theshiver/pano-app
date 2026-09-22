@@ -141,3 +141,29 @@ private func text(_ s: String) -> ClipCapture {
     #expect(PanelModel.completion(for: "hello ", apps: apps) == nil)
     #expect(PanelModel.completion(for: "", apps: apps) == nil)
 }
+
+/// ⏎ only sends a keystroke when the user asked for it *and* macOS still allows it. Both halves
+/// matter: the setting is opt-in so a fresh install never raises the permission prompt, and the
+/// permission can be revoked in System Settings long after it was granted. When either is missing
+/// the panel says "copy" instead of "paste" (PreviewPane) and PasteService posts nothing.
+@MainActor
+@Test func enterPastesOnlyWhenAskedForAndAllowed() throws {
+    let (model, _, folder) = try makeModel()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let defaults = try #require(UserDefaults(suiteName: "pano-test-\(UUID().uuidString)"))
+    let prefs = Preferences(defaults: defaults)
+    model.prefs = prefs
+
+    #expect(prefs.autoPaste == false)  // opt-in; a fresh install must not ask for anything
+    #expect(model.willAutoPaste == false)
+
+    prefs.autoPaste = true
+    model.setAccessibilityTrusted(false)
+    #expect(model.willAutoPaste == false)  // asked for, not granted yet
+
+    model.setAccessibilityTrusted(true)
+    #expect(model.willAutoPaste)
+
+    prefs.autoPaste = false
+    #expect(model.willAutoPaste == false)  // granted, but the user turned it back off
+}

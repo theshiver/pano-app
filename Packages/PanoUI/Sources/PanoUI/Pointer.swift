@@ -1,12 +1,12 @@
-import AppKit
 import SwiftUI
 
 extension View {
-    /// Shows the pointing-hand cursor while hovering, so clickable custom views (rows, chips, rail
-    /// icons) read as clickable. Native controls in Settings already do this themselves.
+    /// Shows the pointing-hand cursor while hovering, so anything clickable reads as clickable.
+    ///
+    /// Uses SwiftUI's own `pointerStyle` (macOS 15+) rather than pushing and popping `NSCursor` by
+    /// hand: the manual stack leaks a stuck hand cursor whenever the matching exit event never
+    /// arrives, which happens every time a window closes while the pointer is over a control.
     func pointer() -> some View {
-        onHover { inside in
-            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
+        pointerStyle(.link)
     }
 }

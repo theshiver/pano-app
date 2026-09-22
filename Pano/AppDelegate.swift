@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKey: GlobalHotKey?
     private var statusItem: NSStatusItem?
     private var onboarding: OnboardingController?
+    private var pasteHint: PasteHintController?
     private var settings: SettingsController?
     private var prefs: Preferences?
     private var isPaused = false
@@ -54,6 +55,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panel = PanelController(prefs: prefs)
         self.panel = panel
 
+        // Tells the user the clip is on the clipboard when ⏎ could not reach their app.
+        let hint = PasteHintController(prefs: prefs)
+        self.pasteHint = hint
+        hint.showForDebugIfRequested()
+
         let actions = PanelActions(
             paste: { [weak panel] id, plainText in
                 // Order matters (docs/adr/0003): hide the panel first so the previous app regains
@@ -66,7 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if plainText, let plain = payload.first(where: { $0.uti == "public.utf8-plain-text" }) {
                         payload = [plain]  // ⇧⏎: paste without formatting
                     }
-                    await PasteService.paste(payload)
+                    let landed = await PasteService.paste(payload, auto: prefs.autoPaste)
+                    if !landed { hint.showIfNeeded(trusted: PasteService.isAccessibilityTrusted) }
                 }
             },
             pasteText: { [weak panel] text, html in
@@ -75,7 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     try? await Task.sleep(for: .milliseconds(60))
                     var payload = [("public.utf8-plain-text", Data(text.utf8))]
                     if let html { payload.insert(("public.html", Data(html.utf8)), at: 0) }
-                    await PasteService.paste(payload)
+                    let landed = await PasteService.paste(payload, auto: prefs.autoPaste)
+                    if !landed { hint.showIfNeeded(trusted: PasteService.isAccessibilityTrusted) }
                 }
             },
             close: { [weak panel] in
@@ -95,7 +103,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setUpStatusItem(visible: prefs.showMenuBarIcon)
 
-        let onboarding = OnboardingController()
+        // Off the launch path but on the main thread, which the importer requires. See its comment:
+        // this is ~330 ms that would otherwise land on the first panel open.
+        Task { @MainActor in RichPreview.prewarm() }
+
+        let onboarding = OnboardingController(prefs: prefs)
         self.onboarding = onboarding
         onboarding.showIfNeeded()
 

@@ -138,11 +138,18 @@ struct PreviewPane: View {
             .animation(.easeInOut(duration: 0.09), value: model.activeTransformId)
             .task(id: "rich-\(item.id)") {
                 guard item.kind == .richtext else { return }
+                // Settle first. These `.task` bodies inherit the view's MainActor isolation, and
+                // AppKit's HTML importer is main-thread-only, so without a cancellation point ahead
+                // of it every item the selection passes through gets parsed in full — which is what
+                // made arrowing quickly through the list stick. `.task(id:)` cancels the previous
+                // run when the selection moves; this gives that cancellation somewhere to land.
+                guard await settled() else { return }
                 let payload = await model.payload(for: item.id)
                 if let text = RichPreview.attributed(payload: payload), !Task.isCancelled { rich = (item.id, text) }
             }
             .task(id: "\(item.id)-\(model.syntaxTheme)-\(wantsCode)") {
                 guard wantsCode, let content = item.content else { return }
+                guard await settled() else { return }
                 let (text, _) = CodeText.preview(content)
                 let language = CodeHighlighter.detectLanguage(String(text.prefix(4000)))
                 let theme = model.syntaxTheme
@@ -202,23 +209,43 @@ struct PreviewPane: View {
                 .font(Theme.chipFont)
                 .foregroundStyle(Theme.secondary(scheme))
             Spacer()
+            if !model.willAutoPaste {
+                Text("then ⌘V in your app")
+                    .font(Theme.chipFont)
+                    .foregroundStyle(Theme.secondary(scheme))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
     }
 
+    /// How long the selection has to hold still before the preview does expensive work. Roughly one
+    /// arrow-key repeat: hold the key and nothing is parsed, stop and the preview fills in at once.
+    private static let settleDelay = Duration.milliseconds(90)
+
+    /// `false` when the selection moved on while waiting, so the caller drops its work.
+    private func settled() async -> Bool {
+        try? await Task.sleep(for: Self.settleDelay)
+        return !Task.isCancelled
+    }
+
+    /// What ⏎ does. With "Paste automatically" on and its permission granted the clip lands in the
+    /// app the user came from; otherwise ⏎ only makes it the clipboard and the footer says so, so
+    /// nobody presses ⏎ and stares at an app where nothing happened.
+    private var verb: String { model.willAutoPaste ? "paste" : "copy" }
+
     private var hint: String {
         let item = model.selectedItem
         if (item?.kind == .image || item?.kind == .file), let ocr = item?.ocrText, !ocr.isEmpty {
-            return "⏎ paste image · ⇧⏎ paste text · ⌘P pin"
+            return "⏎ \(verb) image · ⇧⏎ \(verb) text · ⌘P pin"
         }
         if model.activeTransform != nil {
-            return "⏎ paste transformed · ⇧⏎ raw · ⌘P pin"
+            return "⏎ \(verb) transformed · ⇧⏎ raw · ⌘P pin"
         }
         if model.selectedPinboardId != nil {
-            return "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ remove from board"
+            return "⏎ \(verb) · ⇧⏎ raw · ⌘P pin · ⌘⌫ remove from board"
         }
-        return "⏎ paste · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete"
+        return "⏎ \(verb) · ⇧⏎ raw · ⌘P pin · ⌘⌫ delete"
     }
 }
 

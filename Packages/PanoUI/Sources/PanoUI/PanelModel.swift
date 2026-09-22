@@ -55,6 +55,31 @@ public final class PanelModel {
     /// True while ⌘ is held, so the list can show the ⌘1–9 quick-paste numbers.
     public var commandHeld: Bool = false
 
+    /// Whether the permission behind auto-paste is currently granted. Refreshed by the controller
+    /// when the panel opens rather than read per render: the user can revoke it in System Settings
+    /// while Pano is running, but not between two frames of the same panel.
+    public private(set) var isAccessibilityTrusted = false
+
+    /// Whether ⏎ will land the clip in the app the user came from, or only put it on the clipboard
+    /// for them to paste. Off unless the user turned "Paste automatically" on *and* the permission
+    /// it needs is still granted; the preview footer tells them which of the two they are getting.
+    public var willAutoPaste: Bool { (prefs?.autoPaste ?? false) && isAccessibilityTrusted }
+
+    public func setAccessibilityTrusted(_ trusted: Bool) {
+        isAccessibilityTrusted = trusted
+    }
+
+    /// Bumped by the controller every time the panel is ordered front, so the view can put first
+    /// responder back on the search field.
+    ///
+    /// The view cannot do this in `onAppear`: that fires once, when the hosting view is attached at
+    /// launch, while the panel is still hidden and cannot take focus — so the focus is dropped and,
+    /// because the view never disappears, never asked for again. The panel then opens dead to the
+    /// keyboard until the user clicks into the field.
+    public private(set) var focusRequests = 0
+
+    public func requestSearchFocus() { focusRequests += 1 }
+
     private let store: Store
     private let actions: PanelActions
     private var reloadTask: Task<Void, Never>?

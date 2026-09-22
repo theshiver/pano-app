@@ -27,10 +27,18 @@ actor CodeText {
         return (lines.prefix(previewLineLimit).joined(separator: "\n"), lines.count - previewLineLimit)
     }
 
+    /// The theme currently loaded into the engine. `setTheme(to:)` parses the theme's CSS and
+    /// rebuilds its attribute table, so calling it per highlight — that is, per arrow key — is what
+    /// made moving quickly through the list feel sticky. It only has to run when the theme changes.
+    private var appliedTheme: String?
+
     func highlight(_ code: String, language: CodeHighlighter.Language?, theme: String) -> Result? {
         guard let highlightr else { return nil }
-        highlightr.setTheme(to: theme)
-        highlightr.theme.setCodeFont(.monospacedSystemFont(ofSize: 10.5, weight: .regular))
+        if appliedTheme != theme {
+            highlightr.setTheme(to: theme)
+            highlightr.theme.setCodeFont(.monospacedSystemFont(ofSize: 10.5, weight: .regular))
+            appliedTheme = theme
+        }
         guard let attributed = highlightr.highlight(code, as: language.map(Self.hljsName), fastRender: true) else {
             return nil
         }

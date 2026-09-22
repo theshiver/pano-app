@@ -13,6 +13,7 @@
 		64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */; };
 		79300C362BFA1D525B0CDE30 /* OnboardingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */; };
 		AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8992C5DECD288DF58410A7C3 /* PanoUI */; };
+		BDAFC0B4C1A158B9AEBEC12C /* PasteHintController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */; };
 		C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9568E340008D408C1E2903 /* PanoStore */; };
 		D8FBD0161FA8AD0F8FDB5954 /* PanoTransforms in Frameworks */ = {isa = PBXBuildFile; productRef = C56539CEB87A16AEA90C5B55 /* PanoTransforms */; };
 		DD5C20F4F455D9EDD71BBCFC /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */; };
@@ -35,6 +36,7 @@
 		707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingController.swift; sourceTree = "<group>"; };
 		AF22A45DD1021A67EE7E2992 /* Pano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pano.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B94400302E890E027583C578 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHintController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +75,7 @@
 				707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */,
 				2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */,
 				168A8E4B981B98CCA2740F4B /* PanoApp.swift */,
+				C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */,
 				6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */,
 			);
 			path = Pano;
@@ -183,6 +186,7 @@
 				79300C362BFA1D525B0CDE30 /* OnboardingController.swift in Sources */,
 				E5E28B945B3C06AC280BEE97 /* PanelController.swift in Sources */,
 				430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */,
+				BDAFC0B4C1A158B9AEBEC12C /* PasteHintController.swift in Sources */,
 				DD5C20F4F455D9EDD71BBCFC /* SettingsController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -256,7 +260,7 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -343,7 +347,7 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -1,17 +1,20 @@
 import SwiftUI
 
-/// Live permission state for the first-run window. The controller flips `isTrusted` when the user
-/// turns Pano on in System Settings; the view animates the change instead of being rebuilt.
+/// Live state for the first-run window: whether auto-paste is both wanted and allowed. The
+/// controller flips it when the user turns Pano on in System Settings; the view animates the change
+/// instead of being rebuilt.
 @MainActor
 public final class OnboardingState: ObservableObject {
-    @Published public var isTrusted: Bool
-    public init(isTrusted: Bool) { self.isTrusted = isTrusted }
+    @Published public var isAutoPasteOn: Bool
+    public init(isAutoPasteOn: Bool) { self.isAutoPasteOn = isAutoPasteOn }
 }
 
 /// First-run screen (design/onboarding-mockup.html). Three parts: the icon and a one-line promise,
-/// a looping mini demo that teaches ⌘⇧V → pick → ⏎ without a manual, and the two permissions
-/// macOS will ask for. Accessibility is the only one the user has to go and grant, so it gets the
-/// button; auto-paste stays optional (docs/adr/0003) and "Skip" leaves the app fully usable.
+/// a looping mini demo that teaches ⌘⇧V → pick → ⏎ without a manual, and what macOS will ask about.
+///
+/// The second row is an **offer, not a requirement**: auto-paste is off until the user presses
+/// "Turn on", and skipping leaves the app complete apart from one keystroke. ⏎ here dismisses the
+/// window; it must never be the key that grants a permission (docs/adr/0003).
 public struct OnboardingView: View {
     @ObservedObject private var state: OnboardingState
     private let onEnable: () -> Void
@@ -22,6 +25,10 @@ public struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var entered = false
     @State private var demo = DemoPhase.idle
+    /// Keyboard focus starts on the dismiss button, never on "Turn on". A `.defaultAction` shortcut
+    /// alone is not enough: a focused button is activated by Return and Space on its own, so without
+    /// this the grant is one blind keypress away — which is how the rejected build behaved.
+    @FocusState private var focus: Focus?
 
     public static let width: CGFloat = 480
 
@@ -69,7 +76,7 @@ public struct OnboardingView: View {
                 .padding(.top, 16)
                 .rise(entered, delay: 0.32)
 
-            if state.isTrusted {
+            if state.isAutoPasteOn {
                 Button(action: onSkip) {
                     HStack(spacing: 8) {
                         Text("Start using Pano")
@@ -81,6 +88,8 @@ public struct OnboardingView: View {
                 }
                 .buttonStyle(TealButtonStyle(corner: 9))
                 .keyboardShortcut(.defaultAction)
+                .focused($focus, equals: .dismiss)
+                .pointer()
                 .padding(.top, 14)
                 .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
@@ -92,7 +101,8 @@ public struct OnboardingView: View {
         .padding(EdgeInsets(top: 44, leading: 32, bottom: 24, trailing: 32))
         .frame(width: Self.width)
         .background(backdrop)
-        .animation(.spring(duration: 0.45), value: state.isTrusted)
+        .defaultFocus($focus, .dismiss)
+        .animation(.spring(duration: 0.45), value: state.isAutoPasteOn)
         .onAppear {
             withAnimation(.spring(duration: 0.7, bounce: 0.3)) { entered = true }
         }
@@ -117,6 +127,8 @@ public struct OnboardingView: View {
     }
 
     // MARK: Demo loop
+
+    private enum Focus: Hashable { case dismiss }
 
     private enum DemoPhase: Equatable { case idle, keys, panel, picked, returned, pasted }
 
@@ -268,21 +280,24 @@ public struct OnboardingView: View {
                 title: "Read the clipboard",
                 detail: "macOS asks the first time Pano looks. Just allow it."
             ) {
-                Circle().fill(Palette.row(scheme))
-                    .overlay(
-                        Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(
-                            Palette.accent(scheme)))
+                // Deliberately not a tick. Pano does not read `NSPasteboard.AccessBehavior` here, so
+                // it cannot honestly report this as granted; the row is a heads-up about a prompt
+                // that has not happened yet (docs/04-permissions.md). The dot on the row below is
+                // the only one in this window that means a state.
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             } trailing: {
                 EmptyView()
             }
             Divider().padding(.horizontal, 14)
             permissionRow(
-                title: "Paste for you",
-                detail: state.isTrusted
-                    ? "Accessibility is on. Pano can press ⌘V for you."
-                    : "Needs Accessibility, so Pano can press ⌘V in the app you were in."
+                title: "Paste automatically",
+                detail: state.isAutoPasteOn
+                    ? "On. Pick a clip, press ⏎, and it lands in the app you were in."
+                    : "Optional. Let Pano send the ⌘V for you; macOS asks first."
             ) {
-                if state.isTrusted {
+                if state.isAutoPasteOn {
                     Circle().fill(Color.green)
                         .overlay(
                             Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(
@@ -293,10 +308,11 @@ public struct OnboardingView: View {
                     PendingDot(color: Palette.accent(scheme), reduceMotion: reduceMotion)
                 }
             } trailing: {
-                if !state.isTrusted {
-                    Button("Enable", action: onEnable)
+                if !state.isAutoPasteOn {
+                    Button("Turn on", action: onEnable)
                         .buttonStyle(TealButtonStyle(corner: 8))
-                        .keyboardShortcut(.defaultAction)
+                        .pointer()
+                        .accessibilityHint("Asks macOS for permission to send the paste keystroke")
                 }
             }
         }
@@ -307,36 +323,47 @@ public struct OnboardingView: View {
         )
     }
 
+    /// Title and action share the top line; the detail wraps underneath both. Anchoring the button
+    /// to the title rather than centring it on the whole row keeps the layout still however long the
+    /// detail gets — which matters, because the Turkish strings are longer.
     private func permissionRow<Dot: View, Trailing: View>(
         title: LocalizedStringKey, detail: LocalizedStringKey,
         @ViewBuilder dot: () -> Dot, @ViewBuilder trailing: () -> Trailing
     ) -> some View {
-        HStack(spacing: 12) {
-            dot().frame(width: 22, height: 22)
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: Self.dotGap) {
+                dot().frame(width: Self.dotWidth, height: 22)
                 Text(title).font(.system(size: 13, weight: .semibold))
-                Text(detail).font(.system(size: 12)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                trailing()
             }
-            Spacer(minLength: 8)
-            trailing()
+            Text(detail).font(.system(size: 12)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, Self.dotWidth + Self.dotGap)  // flows under the title, not the dot
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
     }
 
+    private static let dotWidth: CGFloat = 22
+    private static let dotGap: CGFloat = 12
+
     private var footer: some View {
         VStack(spacing: 6) {
             Text("Everything stays on this Mac. No cloud, no account.")
-            if !state.isTrusted {
+            if !state.isAutoPasteOn {
                 HStack(spacing: 10) {
-                    Button("Skip, I'll press ⌘V myself", action: onSkip)
+                    Button("No thanks, I'll press ⌘V myself", action: onSkip)
                         .buttonStyle(.plain)
                         .underline()
+                        .keyboardShortcut(.defaultAction)
+                        .focused($focus, equals: .dismiss)
+                        .pointer()
                     Text("·")
                     Button("Open System Settings", action: onOpenSettings)
                         .buttonStyle(.plain)
                         .underline()
+                        .pointer()
                 }
             }
         }

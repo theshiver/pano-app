@@ -54,6 +54,7 @@ public struct PanelView: View {
             model.activate()
             searchFocused = true
         }
+        .onChange(of: model.focusRequests) { searchFocused = true }
     }
 
     private var rail: some View {
