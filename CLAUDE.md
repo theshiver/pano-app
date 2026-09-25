@@ -7,6 +7,8 @@ Read this file completely before doing anything in this repo.
 A free, open-source clipboard manager for macOS. **Local only**: no sync, no cloud,
 no account, no telemetry, no network code at all. Distributed free on the Mac App
 Store only; no DMG, no Homebrew cask, no binaries on GitHub. MIT licensed.
+The repo stays private until after the App Store launch, so nothing user-facing
+(App Store text, site, review notes) may claim "open source" or link the repo yet.
 
 One-line promise: *as fast as Maccy, as good-looking as Paste, completely free, and
 the data never leaves the Mac.*
@@ -42,7 +44,8 @@ them, and push back if asked to slip one in mid-task.
 - GRDB + SQLite with an FTS5 index. **Not** SwiftData — see `docs/adr/0002`.
 - Vision framework for OCR.
 - Swift Package Manager, local packages inside the repo.
-- No third-party dependency beyond GRDB without an ADR justifying it.
+- Third-party dependencies: GRDB, and Highlightr in `PanoUI` (`docs/adr/0007`).
+  Anything else needs an ADR justifying it.
 
 ## Repo layout
 
@@ -96,10 +99,14 @@ wrong wastes days:
    and needs Accessibility anyway plus two more entitlements and a second dialog.
    Details in `docs/adr/0003`.
 
-3. **Auto-paste must be switchable off and degrade gracefully.** If the user
-   does not grant Accessibility, the app still works: it puts the item on the
-   pasteboard and tells the user to press ⌘V. Auto-paste is never allowed to be a
-   launch blocker.
+3. **Auto-paste is opt-in (off by default) and degrades gracefully.** Off by
+   default since the App Store 2.4.5 review. Without it, or without the
+   Accessibility grant, the app puts the item on the pasteboard and tells the
+   user to press ⌘V. Auto-paste is never allowed to be a launch blocker.
+   **Never post an event before `AXIsProcessTrusted()` is true, and never ask
+   macOS to prompt** (no throwaway events, no `CGRequestPostEventAccess`). The
+   user adds Pano to the list themselves. Rejected twice without this rule; see
+   `docs/adr/0003`, second addendum.
 
 4. **Reading the pasteboard triggers a system alert once** (macOS 15.4+,
    `NSPasteboard.AccessBehavior`). The user then has to switch the app to
@@ -122,7 +129,8 @@ wrong wastes days:
 - UI strings: localised, Turkish and English, no hardcoded user-facing text.
 - One type per file, file named after the type.
 - Prefer `struct` and value semantics. `actor` for the capture loop and the store.
-- No force unwrapping outside tests. No `try!`.
+- No force unwrapping, tests included (CI's swift-format enforces `NeverForceUnwrap`
+  everywhere). No `try!`.
 - Tests live beside the package they test; every transform gets a unit test with
   a real-world input, not a synthetic one.
 - Accessibility is not a phase-8 chore: every control gets a label as it is written.
@@ -132,8 +140,9 @@ wrong wastes days:
 This project is being built part-time by one person. Velocity comes from not
 doing extra work, not from doing work faster.
 
-- **Ask before assuming.** If intent, architecture or a requirement is unclear,
-  ask before writing a line.
+- **Ask when it matters.** If intent, architecture or a requirement is genuinely
+  unclear, or the change is hard to reverse, ask first. For clear, low-risk work,
+  state your assumption and proceed.
 - **Question the request.** If a request seems off, under-specified, or aimed at
   the wrong problem, say so and confirm before executing it literally.
 - **Simplest thing that works.** No abstraction, protocol or generic that is not
@@ -167,5 +176,4 @@ Short, direct, no filler openers, no closing summary that repeats what was said.
 
 A week in `docs/06-roadmap.md` is done when its exit criterion is true, the tests
 pass, CI is green, and the app still launches and behaves at the previous week's
-level. Not before. Week 4 is the one that matters most: on that day the app
-replaces Maccy in daily use.
+level. Not before.

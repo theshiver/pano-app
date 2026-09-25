@@ -71,14 +71,14 @@ public struct PasteHintView: View {
     private var title: LocalizedStringKey {
         switch reason {
         case .autoPasteOff: "Copied. Press ⌘V to paste it."
-        case .permissionMissing: "Copied. Pano cannot press ⌘V for you yet."
+        case .permissionMissing: "Copied. Pano can't press ⌘V until you allow it."
         }
     }
 
     private var actionLabel: LocalizedStringKey {
         switch reason {
         case .autoPasteOff: "Let Pano paste for me"
-        case .permissionMissing: "Open System Settings"
+        case .permissionMissing: "Finish setup"
         }
     }
 }

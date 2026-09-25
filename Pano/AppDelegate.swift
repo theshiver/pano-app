@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
 
         // Tells the user the clip is on the clipboard when ⏎ could not reach their app.
-        let hint = PasteHintController(prefs: prefs)
+        let hint = PasteHintController(prefs: prefs, openSettings: { [weak self] in self?.openSettings() })
         self.pasteHint = hint
         hint.showForDebugIfRequested()
 
@@ -249,11 +249,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// `PANO_STORE_FOLDER` picks a sibling folder inside the container (demo data for screenshots,
-    /// see DemoSeed.swift); the real history is never touched.
+    /// `PANO_STORE_FOLDER` (Debug builds) picks a sibling folder inside the container (demo data for
+    /// screenshots, see DemoSeed.swift); the real history is never touched.
     private static func storeFolder() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let name = ProcessInfo.processInfo.environment["PANO_STORE_FOLDER"] ?? "Pano"
+        #if DEBUG
+            let name = ProcessInfo.processInfo.environment["PANO_STORE_FOLDER"] ?? "Pano"
+        #else
+            let name = "Pano"  // no environment hooks in a shipping build
+        #endif
         return base.appendingPathComponent(name, isDirectory: true)
     }
 }

@@ -78,74 +78,68 @@ many dialogs and entitlements sit on top of that one grant.
 
 ```
 Entitlements: com.apple.security.app-sandbox
-Permission:   Accessibility (System Settings → Privacy & Security → Device Control and Data Access)
+Permission:   Accessibility (System Settings → Privacy & Security → Device Control and Data Access on macOS 27)
 Check:        AXIsProcessTrusted()
-Prompt:       raised by posting the first CGEvent, NOT by AXIsProcessTrustedWithOptions
+Prompt:       NONE. Pano never asks macOS; the user adds Pano to the list themselves
 Deep link:    x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility
 ```
 
-On macOS 26/27, `AXIsProcessTrustedWithOptions(...prompt: true)` does **not**
-show a dialog — `tccd` logs *"kTCCServiceAccessibility does not allow
-prompting"*. The prompt *"Pano would like to control this Mac and access your
-data"* (with *Open System Settings*) appears the first time the app **posts an
-event**, and macOS adds Pano to the list (unchecked) at that moment. So
-onboarding triggers the prompt by attempting a paste, then polls
-`AXIsProcessTrusted()` while the user flips the one switch. The deep link opens
-the right pane (verified on macOS 27). The pane is now labelled *Device Control
-and Data Access*, not *Accessibility*.
+**Changed 2026-09-25, after the second 2.4.5 rejection** (`adr/0003`, second
+addendum). On macOS 26/27, `AXIsProcessTrustedWithOptions(...prompt: true)`
+does not show a dialog; the system dialog *"Pano would like to control this Mac
+and access your data"* appears only when the app **posts an event** without the
+grant, and macOS adds the app to the list (unchecked) at that moment. Pano used
+to post a throwaway event on purpose to get that dialog. It no longer does. The
+cost is that macOS does not list Pano by itself: the user clicks + or drags
+Pano.app in. That is exactly how every Mac App Store clipboard manager we
+checked behaves (Recopy, Clipboard AI, Paste; see the addendum).
 
 Sequence:
 
 1. Write the chosen item to `NSPasteboard.general` (whitelisted types, file URLs
    as separate items, see `adr/0003`).
 2. Hide the panel so the previous app regains key focus.
-3. If auto-paste is on and `AXIsProcessTrusted()` is true, post ⌘V key-down and
-   key-up via `CGEvent` on the session event tap. Otherwise show a brief hint to
-   press ⌘V and stop.
+3. If auto-paste is on **and** `AXIsProcessTrusted()` is true, post ⌘V key-down
+   and key-up via `CGEvent` on the session event tap. Otherwise post nothing and
+   show the hint card.
 
 Nothing is restored afterwards. The item is now the clipboard; the capture loop
 sees the change and moves it to the top of history.
 
 Measured: `CGEvent.post` returns in 1–17 ms.
 
-### Auto-paste is opt-in
-
-**Changed 2026-09-22, after App Review rejected 1.0 (3) under guideline 2.4.5.**
-The first two rules below were written here from the start and were never
-implemented; the reviewer met an app that demanded the permission on first run
-and offered no way to turn the feature off. See `adr/0003`, addendum.
+### Auto-paste is opt-in and never requested
 
 Settings → General → Panel → **Paste automatically**, `Preferences.autoPaste`,
 **default off**:
 
 - Off (the default) → `PasteService.paste(_:auto:)` writes the pasteboard and
-  returns. **No `CGEvent` is posted, so macOS never raises the "would like to
-  control this Mac" prompt.** The preview footer says `⏎ copy … then ⌘V in your
-  app` instead of `⏎ paste`.
-- On but not trusted → the post happens and does nothing; Settings shows the
-  banner and the deep link. The footer still says `copy`, because
-  `PanelModel.willAutoPaste` is `autoPaste && isAccessibilityTrusted`.
-- On and trusted → ⌘V is posted, as before.
+  returns. No event is posted. The preview footer says `⏎ copy … then ⌘V in
+  your app` instead of `⏎ paste`.
+- On but not trusted → still no event. Settings shows three steps and two
+  buttons: *Open System Settings* (deep link) and *Show Pano in Finder*
+  (`activateFileViewerSelecting`, so the user can drag Pano into the list).
+- On and trusted → ⌘V is posted.
 
-Two invariants, both load-bearing for review:
+Invariants, all load-bearing for review:
 
-1. **`PasteService.triggerAccessibilityPrompt()` has exactly one caller path:
-   the user turning the setting on** (the Settings toggle, or "Turn on" in
-   onboarding, which sets the same preference). Nothing else in the app may call
-   it. Adding a second caller is what the rejection was about.
-2. **Onboarding is not a permission gate.** It is shown once per install
-   (`Preferences.hasSeenOnboarding`), regardless of permission state, and its
-   ⏎ dismisses the window — it must never be the key that grants a permission.
-   `.keyboardShortcut(.defaultAction)` on the dismiss button is not sufficient
-   on its own: a *focused* button is activated by Return and Space regardless,
-   so the window also pins initial focus to dismiss with `.defaultFocus`.
-3. **An ⏎ that does not reach the other app must say so.** `PasteService.paste`
-   returns whether the keystroke is expected to have landed; `false` makes
-   `PasteHintController` show a card saying the clip is on the clipboard, with
-   the offer to turn auto-paste on. Without it the panel just vanishes and
-   nothing happens where the user is looking, which reads as a broken app —
-   the footer text alone is too quiet to carry this. The card stops appearing
-   once the user answers "Don't remind me"
+1. **No event is ever posted before the permission is granted.** The only
+   `CGEvent.post` in the codebase is in `PasteService.postCommandV()`, and its
+   only caller sits behind `guard auto, AXIsProcessTrusted()`. There is no
+   prompt trigger; do not add one, and do not add `CGRequestPostEventAccess`
+   (its header says "potentially prompting").
+2. **Nothing asks macOS for anything.** Turning the setting on, the hint card's
+   action and the Settings buttons only record the choice and open panes the
+   user then acts in.
+3. **Onboarding does not mention auto-paste.** It is shown once per install
+   (`Preferences.hasSeenOnboarding`), teaches ⌘⇧V → ⏎ → ⌘V, gives the heads-up
+   about the pasteboard prompt, and has one button. The first rejection's
+   screenshot was an onboarding permission row.
+4. **An ⏎ that does not reach the other app must say so.** `PasteService.paste`
+   returns whether the keystroke went out; `false` makes `PasteHintController`
+   show a card saying the clip is on the clipboard, with the offer to turn
+   auto-paste on (which opens Pano's Settings at the steps above). The card
+   stops appearing once the user answers "Don't remind me"
    (`Preferences.autoPasteHintDismissed`).
 
 Never block launch, onboarding or any other feature on this permission.

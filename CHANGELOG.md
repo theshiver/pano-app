@@ -30,6 +30,7 @@ First release.
 - Everything stays on the Mac. The app ships without the network entitlement
   and collects nothing.
 - "Paste automatically" — sending ⌘V to the app you came from — is **off by
-  default**. While it is off Pano posts no synthetic events, so macOS never asks
-  for permission; ⏎ puts the clip on the clipboard and the panel says to press
-  ⌘V. Turning the setting on is the only thing that raises the prompt.
+  default**, and Pano never asks macOS for the permission it needs. ⏎ puts the
+  clip on the clipboard and the panel says to press ⌘V. To turn it on, enable
+  the setting and add Pano under Privacy & Security in System Settings; Pano's
+  Settings has the steps and a button that shows Pano in Finder.

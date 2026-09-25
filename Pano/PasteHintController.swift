@@ -1,5 +1,4 @@
 import AppKit
-import PanoCore
 import PanoUI
 import SwiftUI
 
@@ -11,13 +10,17 @@ import SwiftUI
 @MainActor
 final class PasteHintController {
     private let prefs: Preferences
+    private let openSettings: () -> Void
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
     /// Long enough to read a sentence and click one of the two links.
     private static let visible = Duration.seconds(4)
 
-    init(prefs: Preferences) { self.prefs = prefs }
+    init(prefs: Preferences, openSettings: @escaping () -> Void) {
+        self.prefs = prefs
+        self.openSettings = openSettings
+    }
 
     /// The hint only appears after a real ⏎ in the panel, which makes it awkward to look at while
     /// working on it — driving the panel with synthetic keystrokes to reach it disturbs whatever
@@ -51,12 +54,11 @@ final class PasteHintController {
         let view = PasteHintView(
             reason: reason,
             onEnable: { [weak self] in
+                // Records the choice and opens Pano's own Settings, where the manual steps and the
+                // System Settings / Finder buttons are. Nothing here asks macOS for anything.
                 guard let self else { return }
-                if !self.prefs.autoPaste {
-                    self.prefs.autoPaste = true
-                    PasteService.triggerAccessibilityPrompt()
-                }
-                PasteService.openSettingsPane()
+                self.prefs.autoPaste = true
+                self.openSettings()
                 self.hide()
             },
             onDismiss: { [weak self] in

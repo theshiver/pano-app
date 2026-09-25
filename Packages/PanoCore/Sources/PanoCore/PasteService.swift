@@ -8,20 +8,19 @@ import PanoStore
 /// The caller hides the panel first so the previous app regains key focus, then calls `paste`.
 @MainActor
 public enum PasteService {
-    /// Writes the representations to the pasteboard, and — only when `auto` is true — posts ⌘V after
-    /// a short delay that lets focus settle on the previous app.
+    /// Writes the representations to the pasteboard, then posts ⌘V after a short delay that lets
+    /// focus settle on the previous app — but only when the user turned "Paste automatically" on
+    /// **and** has already granted the permission.
     ///
-    /// `auto` is the user's "Paste automatically" preference, which is off until they turn it on.
-    /// While it is off this posts no events at all, so macOS never raises the "would like to control
-    /// this Mac" prompt and the clip simply becomes the clipboard for the user to paste themselves.
+    /// Never posting while untrusted is the rule this whole file hangs on (docs/adr/0003, second
+    /// addendum). On macOS 26/27, posting an event without the grant is what makes macOS raise its
+    /// own "would like to control this Mac" dialog and add the app to the list. Pano never does
+    /// that: the user adds Pano in System Settings themselves, as with every clipboard manager we
+    /// checked on the Mac App Store.
     ///
-    /// When it is on, the post is unconditional — it is *not* guarded on `AXIsProcessTrusted()`,
-    /// because on macOS 26/27 that prompt only appears when the app actually posts an event, so
-    /// guarding on trust would mean the user is never asked and can never grant (docs/adr/0003).
-    ///
-    /// Returns whether the keystroke is expected to have landed in the other app. **False means the
-    /// clip is only on the clipboard and the caller owes the user a visible explanation** — an ⏎
-    /// that silently does nothing reads as a broken app.
+    /// Returns whether the keystroke went out. **False means the clip is only on the clipboard and
+    /// the caller owes the user a visible explanation** — an ⏎ that silently does nothing reads as
+    /// a broken app.
     @discardableResult
     public static func paste(
         _ payload: [(uti: String, data: Data)],
@@ -29,10 +28,10 @@ public enum PasteService {
         settleDelay: Duration = .milliseconds(50)
     ) async -> Bool {
         write(payload)
-        guard auto else { return false }
+        guard auto, AXIsProcessTrusted() else { return false }
         try? await Task.sleep(for: settleDelay)
         postCommandV()
-        return AXIsProcessTrusted()
+        return true
     }
 
     /// Writes every representation as explicit `NSPasteboardItem`s: the non-file types on one item,
@@ -60,27 +59,6 @@ public enum PasteService {
         if !items.isEmpty { pb.writeObjects(items) }
     }
 
-    /// Posts a harmless synthetic event (a mouse-move to the current location) so macOS raises the
-    /// "would like to control this Mac" prompt and lists Pano in Device Control and Data Access. On
-    /// macOS 26/27 that prompt only appears when the app actually posts an event, so this is how the
-    /// permission is requested rather than an AX permission API (which does not prompt —
-    /// docs/adr/0003).
-    ///
-    /// **Only ever called from the user turning "Paste automatically" on.** Nothing else in the app
-    /// may call it: an app that raises this prompt before the user asks for the feature is exactly
-    /// what the 1.0 (3) review rejected.
-    public static func triggerAccessibilityPrompt() {
-        let source = CGEventSource(stateID: .combinedSessionState)
-        let location = CGEvent(source: nil)?.location ?? .zero
-        guard
-            let move = CGEvent(
-                mouseEventSource: source, mouseType: .mouseMoved,
-                mouseCursorPosition: location, mouseButton: .left
-            )
-        else { return }
-        move.post(tap: .cgSessionEventTap)
-    }
-
     public static var isAccessibilityTrusted: Bool { AXIsProcessTrusted() }
 
     /// Opens the System Settings pane holding the switch. macOS 26/27 labels it "Device Control and
@@ -88,6 +66,13 @@ public enum PasteService {
     public static func openSettingsPane() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         if let url { NSWorkspace.shared.open(url) }
+    }
+
+    /// Selects Pano.app in a Finder window. macOS does not add Pano to the permission list on its
+    /// own (see `paste`), so the user has to add it with + or by dragging it in; this puts the app
+    /// where they can see it.
+    public static func revealAppInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
     }
 
     static func postCommandV() {

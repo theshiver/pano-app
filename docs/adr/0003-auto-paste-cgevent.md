@@ -131,3 +131,55 @@ description, and that description needs rewriting either way
 build has to drop the feature entirely. Not decided here. If it is dropped it is
 a compile-time removal, not a default — a setting a reviewer can find and switch
 on is the same rejection again.
+
+## Second addendum — 2026-09-25: rejected again; never post untrusted, never prompt
+
+1.0 (6), with auto-paste opt-in and off by default, was rejected under 2.4.5
+with the same template. Opt-in did not matter.
+
+**What the Mac App Store actually ships.** Checked on copies installed from the
+Mac App Store (`codesign`, entitlements, `nm -u`; first-release dates from the
+iTunes lookup API):
+
+| App | First release | Links |
+|---|---|---|
+| Recopy | 2026-02-23 | `AXIsProcessTrusted(WithOptions)`, `CGEventCreateKeyboardEvent`, `CGEventPost` |
+| Clipboard AI | 2026-03-23 | same |
+| Pastebot 3 | 2026-07-28 | same + `CGRequestPostEventAccess` |
+| Paste | 2015, updated 2026-09-21 | `AXIsProcessTrusted`, `CGEventCreateKeyboardEvent`, `CGEventPost` |
+
+All sandboxed, none with Apple Events entitlements. So the mechanism and the
+permission are not the problem; two of these are new apps from small
+developers approved this year.
+
+**The one behavioural difference found.** This ADR's original flow posted a
+throwaway mouse event, and posted ⌘V without checking trust, precisely so macOS
+would raise its own *"would like to control this Mac"* dialog and add Pano to the
+list. The apps above check trust first and post nothing until it is granted;
+they show their own message and open System Settings, and the user adds the app
+with + (Can confirmed none of them appear in the list by themselves). The
+rejection says the app *"requests access to Accessibility features"*; the system
+dialog is the most literal form of a request, and only Pano produced it. This is
+a hypothesis — App Review's process is not visible — but it is the only
+difference we could find.
+
+**Decision (supersedes the prompt/onboarding parts above):**
+
+- `PasteService.paste` posts only behind `guard auto, AXIsProcessTrusted()`.
+- `triggerAccessibilityPrompt()` is deleted. Pano never posts an event to obtain
+  a prompt, and does not call `CGRequestPostEventAccess`.
+- The user adds Pano manually. Settings shows three steps plus *Open System
+  Settings* and *Show Pano in Finder*.
+- Onboarding no longer mentions auto-paste. It is offered in context by the hint
+  card after an ⏎ that only copied, which leads to those Settings steps.
+- Also removed from the shipping binary: the `PANO_STORE_FOLDER` environment
+  hook (now Debug-only like the other `PANO_*` flags).
+
+The Release binary now links exactly `AXIsProcessTrusted`,
+`CGEventCreateKeyboardEvent` and `CGEventPost`, the same set as Paste.
+
+**Cost:** one manual step (+ or drag) the system used to do for the user.
+
+**If this is rejected too:** the App Review Board appeal in
+`ops/appstore/2.4.5-appeal.md` is held in reserve (one appeal per submission),
+now with the argument that Pano behaves exactly like the approved apps.

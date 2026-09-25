@@ -209,31 +209,30 @@ public struct SettingsView: View {
 
     // MARK: Paste automatically
 
-    /// Off by default, and the only place in the app that asks macOS for permission to send the ⌘V
-    /// keystroke — turning this on is what raises the prompt (docs/adr/0003). Left off, ⏎ only puts
-    /// the clip on the clipboard, which is the whole app minus one keystroke.
+    /// Off by default. Turning it on asks macOS for nothing: Pano never posts an event before the
+    /// permission is granted, so macOS never raises its own dialog and never adds Pano to the list
+    /// by itself (docs/adr/0003, second addendum). The user adds Pano in System Settings, and these
+    /// steps and buttons are there to make that one manual step easy.
     @ViewBuilder private var autoPaste: some View {
-        Toggle(
-            "Paste automatically",
-            isOn: Binding(
-                get: { prefs.autoPaste },
-                set: { on in
-                    prefs.autoPaste = on
-                    // The prompt only appears when the app actually posts an event, so asking is
-                    // posting one. Nothing else in Pano calls this.
-                    if on && !trusted { PasteService.triggerAccessibilityPrompt() }
-                    trusted = PasteService.isAccessibilityTrusted
-                }))
+        Toggle("Paste automatically", isOn: $prefs.autoPaste)
         if prefs.autoPaste && !trusted {
-            note(
-                "macOS has not allowed the keystroke yet. Turn Pano on in System Settings, under "
-                    + "Privacy & Security. Until then ⏎ copies and you press ⌘V yourself."
-            )
-            Button("Open System Settings") { PasteService.openSettingsPane() }
-                .pointer()
-                .accessibilityLabel("Open System Settings to allow Pano to send the paste keystroke")
+            VStack(alignment: .leading, spacing: 6) {
+                note("Pano needs your permission to press ⌘V. Until you give it, ⏎ copies and you press ⌘V.")
+                note("1. Open System Settings. It opens at the right list under Privacy & Security.")
+                note("2. Click + and choose Pano, or drag Pano in from Finder.")
+                note("3. Turn Pano on. Pano picks it up as soon as you come back.")
+                HStack(spacing: 8) {
+                    Button("Open System Settings") { PasteService.openSettingsPane() }
+                        .pointer()
+                        .accessibilityHint("Opens the list where you allow Pano to press ⌘V")
+                    Button("Show Pano in Finder") { PasteService.revealAppInFinder() }
+                        .pointer()
+                        .accessibilityHint("Selects Pano in Finder so you can drag it into the list")
+                }
+                .padding(.top, 2)
+            }
         } else if !prefs.autoPaste {
-            note("⏎ copies the clip; you press ⌘V. Turn this on and Pano sends the ⌘V for you.")
+            note("⏎ copies the clip; you press ⌘V. Turn this on to let Pano press ⌘V for you.")
         }
     }
 
