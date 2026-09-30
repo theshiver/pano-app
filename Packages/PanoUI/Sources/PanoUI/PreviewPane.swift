@@ -124,7 +124,7 @@ struct PreviewPane: View {
                     }
                     .textSelection(.enabled)
                     if preview.cutLines > 0 {
-                        Text("… \(preview.cutLines) more lines — the whole clip pastes")
+                        Text("… \(preview.cutLines) more lines — the whole clip is copied")
                             .font(Theme.rowMeta)
                             .foregroundStyle(Theme.secondary(scheme))
                     }
@@ -189,7 +189,7 @@ struct PreviewPane: View {
                 }
                 .buttonStyle(.plain)
                 .pointer()
-                .accessibilityLabel("Paste \(format.label) \(format.value)")
+                .accessibilityLabel("Copy \(format.label) \(format.value)")
             }
         }
         .padding(12)
@@ -209,11 +209,9 @@ struct PreviewPane: View {
                 .font(Theme.chipFont)
                 .foregroundStyle(Theme.secondary(scheme))
             Spacer()
-            if !model.willAutoPaste {
-                Text("then ⌘V in your app")
-                    .font(Theme.chipFont)
-                    .foregroundStyle(Theme.secondary(scheme))
-            }
+            Text("then ⌘V in your app")
+                .font(Theme.chipFont)
+                .foregroundStyle(Theme.secondary(scheme))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -229,10 +227,8 @@ struct PreviewPane: View {
         return !Task.isCancelled
     }
 
-    /// What ⏎ does. With "Paste automatically" on and its permission granted the clip lands in the
-    /// app the user came from; otherwise ⏎ only makes it the clipboard and the footer says so, so
-    /// nobody presses ⏎ and stares at an app where nothing happened.
-    private var verb: String { model.willAutoPaste ? "paste" : "copy" }
+    /// ⏎ copies; the user pastes with ⌘V (docs/adr/0008).
+    private let verb = "copy"
 
     private var hint: String {
         let item = model.selectedItem

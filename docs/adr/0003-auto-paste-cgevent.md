@@ -1,8 +1,9 @@
 # ADR 0003 — Auto-paste through synthetic ⌘V (`CGEvent.post`) with Accessibility
 
-**Status:** accepted · 2026-09-17 · supersedes the 2026-09-16 version of this
-file, which chose Apple Events → System Events and was disproved by the week 0
-spike.
+**Status:** superseded by `0008` (2026-09-30): Pano no longer auto-pastes. Kept
+for the record and for a possible non-App-Store build. Originally accepted
+2026-09-17, superseding the 2026-09-16 version of this file, which chose Apple
+Events → System Events and was disproved by the week 0 spike.
 
 ## Context
 

@@ -10,62 +10,38 @@ import SwiftUI
 @MainActor
 final class PasteHintController {
     private let prefs: Preferences
-    private let openSettings: () -> Void
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
-    /// Long enough to read a sentence and click one of the two links.
+    /// Long enough to read a sentence and reach the link.
     private static let visible = Duration.seconds(4)
 
-    init(prefs: Preferences, openSettings: @escaping () -> Void) {
-        self.prefs = prefs
-        self.openSettings = openSettings
-    }
+    init(prefs: Preferences) { self.prefs = prefs }
 
     /// The hint only appears after a real ⏎ in the panel, which makes it awkward to look at while
-    /// working on it — driving the panel with synthetic keystrokes to reach it disturbs whatever
-    /// else is on screen. `PANO_SHOW_PASTE_HINT=offer|permission` (Debug builds) shows either
-    /// variant a moment after launch instead.
+    /// working on it. `PANO_SHOW_PASTE_HINT=1` (Debug builds) shows it a moment after launch.
     func showForDebugIfRequested() {
         #if DEBUG
-            let reason: PasteHintView.Reason? =
-                switch ProcessInfo.processInfo.environment["PANO_SHOW_PASTE_HINT"] {
-                case "offer": .autoPasteOff
-                case "permission": .permissionMissing
-                default: nil
-                }
-            guard let reason else { return }
+            guard ProcessInfo.processInfo.environment["PANO_SHOW_PASTE_HINT"] == "1" else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
-                self.show(reason: reason)
+                self.show()
             }
         #endif
     }
 
-    /// Call after every paste that did not reach the other app. Silent once the user has answered
-    /// "Don't remind me" — the preview footer still says `then ⌘V in your app` for anyone who
-    /// forgets, and Settings still holds the toggle.
-    func showIfNeeded(trusted: Bool) {
-        guard !prefs.autoPasteHintDismissed else { return }
-        show(reason: prefs.autoPaste && !trusted ? .permissionMissing : .autoPasteOff)
+    /// Call after every ⏎ in the panel. Silent once the user has answered "Don't remind me"; the
+    /// preview footer still says `then ⌘V in your app` for anyone who forgets.
+    func showIfNeeded() {
+        guard !prefs.copyHintDismissed else { return }
+        show()
     }
 
-    private func show(reason: PasteHintView.Reason) {
-        let view = PasteHintView(
-            reason: reason,
-            onEnable: { [weak self] in
-                // Records the choice and opens Pano's own Settings, where the manual steps and the
-                // System Settings / Finder buttons are. Nothing here asks macOS for anything.
-                guard let self else { return }
-                self.prefs.autoPaste = true
-                self.openSettings()
-                self.hide()
-            },
-            onDismiss: { [weak self] in
-                self?.prefs.autoPasteHintDismissed = true
-                self?.hide()
-            }
-        )
+    private func show() {
+        let view = PasteHintView(onDismiss: { [weak self] in
+            self?.prefs.copyHintDismissed = true
+            self?.hide()
+        })
 
         let hosting = NSHostingView(rootView: view)
         hosting.sizingOptions = [.preferredContentSize, .intrinsicContentSize]

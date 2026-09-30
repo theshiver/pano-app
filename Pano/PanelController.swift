@@ -45,7 +45,6 @@ final class PanelController {
 
     func show() {
         installKeyMonitor()
-        model?.setAccessibilityTrusted(PasteService.isAccessibilityTrusted)  // may have been revoked
         positionNearCursor()
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)

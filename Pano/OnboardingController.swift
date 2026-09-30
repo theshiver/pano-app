@@ -3,8 +3,7 @@ import PanoUI
 import SwiftUI
 
 /// The first-run window: teaches ⌘⇧V and gets out of the way. Shown once per install and never a
-/// permission gate: it asks macOS for nothing and does not mention auto-paste, which is offered in
-/// context after the first ⏎ instead (docs/adr/0003, second addendum).
+/// permission gate: it asks macOS for nothing (docs/adr/0008).
 @MainActor
 final class OnboardingController {
     private let prefs: Preferences

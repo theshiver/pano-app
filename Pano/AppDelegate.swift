@@ -55,35 +55,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panel = PanelController(prefs: prefs)
         self.panel = panel
 
-        // Tells the user the clip is on the clipboard when ⏎ could not reach their app.
-        let hint = PasteHintController(prefs: prefs, openSettings: { [weak self] in self?.openSettings() })
+        // Tells the user the clip is on the clipboard and to press ⌘V.
+        let hint = PasteHintController(prefs: prefs)
         self.pasteHint = hint
         hint.showForDebugIfRequested()
 
         let actions = PanelActions(
             paste: { [weak panel] id, plainText in
-                // Order matters (docs/adr/0003): hide the panel first so the previous app regains
-                // key focus, let it settle, then write the payload and post ⌘V. Doing these in one
-                // Task guarantees the sequence; two separate Tasks raced and ⌘V hit Pano itself.
+                // Hide first so the user is back in their app, then put the clip on the clipboard
+                // for them to paste with ⌘V. Pano does not paste itself (docs/adr/0008).
                 Task { @MainActor in
                     panel?.hide()
-                    try? await Task.sleep(for: .milliseconds(60))
                     var payload = (try? await store.payload(of: id)) ?? []
                     if plainText, let plain = payload.first(where: { $0.uti == "public.utf8-plain-text" }) {
-                        payload = [plain]  // ⇧⏎: paste without formatting
+                        payload = [plain]  // ⇧⏎: without formatting
                     }
-                    let landed = await PasteService.paste(payload, auto: prefs.autoPaste)
-                    if !landed { hint.showIfNeeded(trusted: PasteService.isAccessibilityTrusted) }
+                    PasteService.write(payload)
+                    hint.showIfNeeded()
                 }
             },
             pasteText: { [weak panel] text, html in
                 Task { @MainActor in
                     panel?.hide()
-                    try? await Task.sleep(for: .milliseconds(60))
                     var payload = [("public.utf8-plain-text", Data(text.utf8))]
                     if let html { payload.insert(("public.html", Data(html.utf8)), at: 0) }
-                    let landed = await PasteService.paste(payload, auto: prefs.autoPaste)
-                    if !landed { hint.showIfNeeded(trusted: PasteService.isAccessibilityTrusted) }
+                    PasteService.write(payload)
+                    hint.showIfNeeded()
                 }
             },
             close: { [weak panel] in

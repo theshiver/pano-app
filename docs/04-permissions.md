@@ -62,87 +62,25 @@ looking broken.
 
 ## Problem 2 — pasting back
 
-Every way of pressing ⌘V on the user's behalf needs the user to trust the app
-for **Accessibility**. That includes Apple Events → System Events, whose
-`keystroke` command checks the sender's Accessibility trust and fails with
-`1002` otherwise. There is no permission-free path; the question is only how
-many dialogs and entitlements sit on top of that one grant.
+**Pano does not paste into other apps** (`adr/0008`, 2026-09-30). ⏎ writes the
+chosen clip to `NSPasteboard.general` and the user presses ⌘V.
 
-| Technique | Entitlements | Dialogs | Verdict |
-|---|---|---|---|
-| `CGEvent.post` | `app-sandbox` only | Accessibility | **What Pano uses.** What Maccy ships on the Mac App Store |
-| Apple Events → System Events | `app-sandbox` + `temporary-exception.apple-events` + `automation.apple-events` + usage string | Automation, then Accessibility | Strictly worse. Verified in week 0, see `adr/0003` |
-| Accessibility API (`AXUIElement…`) | — | — | Not needed for pasting; not used |
+Every way of pressing ⌘V on the user's behalf needs the permission System
+Settings lists under Accessibility, and App Review rejected Pano four times for
+using it for auto-paste, the last time naming the feature itself. The history,
+what was measured and what other Mac App Store apps ship is in `adr/0003` and
+`adr/0008`.
 
-### The chosen path
+Rules:
 
-```
-Entitlements: com.apple.security.app-sandbox
-Permission:   Accessibility (System Settings → Privacy & Security → Device Control and Data Access on macOS 27)
-Check:        AXIsProcessTrusted()
-Prompt:       NONE. Pano never asks macOS; the user adds Pano to the list themselves
-Deep link:    x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility
-```
-
-**Changed 2026-09-25, after the second 2.4.5 rejection** (`adr/0003`, second
-addendum). On macOS 26/27, `AXIsProcessTrustedWithOptions(...prompt: true)`
-does not show a dialog; the system dialog *"Pano would like to control this Mac
-and access your data"* appears only when the app **posts an event** without the
-grant, and macOS adds the app to the list (unchecked) at that moment. Pano used
-to post a throwaway event on purpose to get that dialog. It no longer does. The
-cost is that macOS does not list Pano by itself: the user clicks + or drags
-Pano.app in. That is exactly how every Mac App Store clipboard manager we
-checked behaves (Recopy, Clipboard AI, Paste; see the addendum).
-
-Sequence:
-
-1. Write the chosen item to `NSPasteboard.general` (whitelisted types, file URLs
-   as separate items, see `adr/0003`).
-2. Hide the panel so the previous app regains key focus.
-3. If auto-paste is on **and** `AXIsProcessTrusted()` is true, post ⌘V key-down
-   and key-up via `CGEvent` on the session event tap. Otherwise post nothing and
-   show the hint card.
-
-Nothing is restored afterwards. The item is now the clipboard; the capture loop
-sees the change and moves it to the top of history.
-
-Measured: `CGEvent.post` returns in 1–17 ms.
-
-### Auto-paste is opt-in and never requested
-
-Settings → General → Panel → **Paste automatically**, `Preferences.autoPaste`,
-**default off**:
-
-- Off (the default) → `PasteService.paste(_:auto:)` writes the pasteboard and
-  returns. No event is posted. The preview footer says `⏎ copy … then ⌘V in
-  your app` instead of `⏎ paste`.
-- On but not trusted → still no event. Settings shows three steps and two
-  buttons: *Open System Settings* (deep link) and *Show Pano in Finder*
-  (`activateFileViewerSelecting`, so the user can drag Pano into the list).
-- On and trusted → ⌘V is posted.
-
-Invariants, all load-bearing for review:
-
-1. **No event is ever posted before the permission is granted.** The only
-   `CGEvent.post` in the codebase is in `PasteService.postCommandV()`, and its
-   only caller sits behind `guard auto, AXIsProcessTrusted()`. There is no
-   prompt trigger; do not add one, and do not add `CGRequestPostEventAccess`
-   (its header says "potentially prompting").
-2. **Nothing asks macOS for anything.** Turning the setting on, the hint card's
-   action and the Settings buttons only record the choice and open panes the
-   user then acts in.
-3. **Onboarding does not mention auto-paste.** It is shown once per install
-   (`Preferences.hasSeenOnboarding`), teaches ⌘⇧V → ⏎ → ⌘V, gives the heads-up
-   about the pasteboard prompt, and has one button. The first rejection's
-   screenshot was an onboarding permission row.
-4. **An ⏎ that does not reach the other app must say so.** `PasteService.paste`
-   returns whether the keystroke went out; `false` makes `PasteHintController`
-   show a card saying the clip is on the clipboard, with the offer to turn
-   auto-paste on (which opens Pano's Settings at the steps above). The card
-   stops appearing once the user answers "Don't remind me"
-   (`Preferences.autoPasteHintDismissed`).
-
-Never block launch, onboarding or any other feature on this permission.
+1. **No event posting and no Accessibility API in this target.** No `CGEvent`
+   post, no `AXIsProcessTrusted`, no `CGRequestPostEventAccess`, no deep link to
+   that pane. The Release binary links none of them; keep it that way.
+2. **The write is complete.** Every stored type in stored order, file URLs as
+   separate items (`adr/0003`, "What is stored per item"). No restore.
+3. **⏎ must visibly do something.** The preview footer says `then ⌘V in your
+   app`; `PasteHintController` shows a card after ⏎ until the user answers
+   "Don't remind me" (`Preferences.copyHintDismissed`).
 
 ## Verifying before building
 
@@ -161,7 +99,7 @@ No network entitlement. No microphone, camera, location, contacts, calendar,
 Bluetooth. Accessibility only for auto-paste, and only if the user opts in. The
 only file entitlement is `files.user-selected.read-only` (the app-picker and
 files the user explicitly copies); no Apple Events, no temporary exceptions of
-any kind. No Input Monitoring — the global hotkey uses
+any kind. No Accessibility and no Input Monitoring — the global hotkey uses
 Carbon's `RegisterEventHotKey`, which works inside the sandbox and raises no
 prompt at all.
 

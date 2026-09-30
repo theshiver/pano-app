@@ -4,9 +4,8 @@ import SwiftUI
 /// demo that teaches ⌘⇧V → pick → ⏎ → ⌘V without a manual, and a heads-up about the one prompt
 /// macOS may show.
 ///
-/// It deliberately says nothing about auto-paste. Offering it here is what the first 2.4.5
-/// rejection screenshotted; the offer now appears in context, after the first ⏎, and in Settings
-/// (docs/adr/0003, second addendum).
+/// It asks for nothing: Pano needs no permission beyond the one macOS raises itself the first
+/// time the pasteboard is read. There is no auto-paste to offer (docs/adr/0008).
 public struct OnboardingView: View {
     private let onDone: () -> Void
 

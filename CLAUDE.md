@@ -87,26 +87,19 @@ Full detail in `docs/04-permissions.md`. The short version, because getting thes
 wrong wastes days:
 
 1. **The panel must be an `NSPanel` with `.nonactivatingPanel`.** If the panel
-   takes key focus, the previously focused app loses it and paste-back cannot
-   work. Do not build the main panel as a plain SwiftUI `Window` or `WindowGroup`.
+   takes key focus, the previously focused app loses it and the user lands
+   somewhere else when they press ⌘V. Do not build the main panel as a plain
+   SwiftUI `Window` or `WindowGroup`.
 
-2. **Auto-paste posts ⌘V with `CGEvent` and needs the user's Accessibility
-   grant.** No Apple Events, no `temporary-exception` entitlements, no System
-   Events scripting. The entitlements file contains exactly `app-sandbox` and
-   `files.user-selected.read-only` (the latter for the Settings app-picker and
-   files the user explicitly copies) — nothing else. This is essentially what
-   Maccy ships on the Mac App Store; the Apple Events route was tried in week 0
-   and needs Accessibility anyway plus two more entitlements and a second dialog.
-   Details in `docs/adr/0003`.
+2. **No auto-paste.** ⏎ writes the clip to the pasteboard and the user presses
+   ⌘V. No `CGEvent` posting, no Accessibility API (`AXIsProcessTrusted` or any
+   other), no Apple Events, no `temporary-exception` entitlements. App Review
+   rejected four builds under 2.4.5 for auto-paste; see `docs/adr/0008`. The
+   entitlements file contains exactly `app-sandbox` and
+   `files.user-selected.read-only` — nothing else.
 
-3. **Auto-paste is opt-in (off by default) and degrades gracefully.** Off by
-   default since the App Store 2.4.5 review. Without it, or without the
-   Accessibility grant, the app puts the item on the pasteboard and tells the
-   user to press ⌘V. Auto-paste is never allowed to be a launch blocker.
-   **Never post an event before `AXIsProcessTrusted()` is true, and never ask
-   macOS to prompt** (no throwaway events, no `CGRequestPostEventAccess`). The
-   user adds Pano to the list themselves. Rejected twice without this rule; see
-   `docs/adr/0003`, second addendum.
+3. **⏎ must visibly do something.** The preview footer and the hint card tell
+   the user the clip is on the clipboard and to press ⌘V.
 
 4. **Reading the pasteboard triggers a system alert once** (macOS 15.4+,
    `NSPasteboard.AccessBehavior`). The user then has to switch the app to

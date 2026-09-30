@@ -14,7 +14,7 @@ First release.
 
 - Unlimited clipboard history in a local SQLite file, with instant full-text
   search and filters (`type:`, `app:`, `pinned:`, age such as `7d`).
-- A keyboard-first panel on ⌘⇧V: type to search, ⏎ to take a clip, ⇧⏎ for the
+- A keyboard-first panel on ⌘⇧V: type to search, ⏎ to copy a clip, ⇧⏎ for the
   plain-text version, ⌘1–9 for quick picks, ⌘P to pin, ⌘⌫ to delete.
 - Transforms that run as you type: `json`, `b64`, `jwt`, `slug`, `url`, `clean`,
   `markdown`, and colour conversions including a Tailwind match.
@@ -29,8 +29,5 @@ First release.
 
 - Everything stays on the Mac. The app ships without the network entitlement
   and collects nothing.
-- "Paste automatically" — sending ⌘V to the app you came from — is **off by
-  default**, and Pano never asks macOS for the permission it needs. ⏎ puts the
-  clip on the clipboard and the panel says to press ⌘V. To turn it on, enable
-  the setting and add Pano under Privacy & Security in System Settings; Pano's
-  Settings has the steps and a button that shows Pano in Finder.
+- ⏎ copies the clip and you press ⌘V. Pano does not paste into other apps for
+  you, so it needs no permission beyond clipboard access.

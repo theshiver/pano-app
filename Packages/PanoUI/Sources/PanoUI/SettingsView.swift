@@ -7,10 +7,6 @@ import SwiftUI
 /// through the injected closures so PanoUI stays free of the store and ServiceManagement.
 public struct SettingsView: View {
     @Bindable private var prefs: Preferences
-    /// Whether macOS currently allows the ⌘V keystroke. Re-read when Pano is activated, which is
-    /// exactly when the user comes back from flipping the switch in System Settings; polling would
-    /// buy nothing.
-    @State private var trusted = false
     private let exclusion: ExclusionModel
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
@@ -53,10 +49,6 @@ public struct SettingsView: View {
             about.tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 460, height: 400)
-        .onAppear { trusted = PasteService.isAccessibilityTrusted }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            trusted = PasteService.isAccessibilityTrusted
-        }
     }
 
     // MARK: General — how the panel opens and what it shows
@@ -77,7 +69,6 @@ public struct SettingsView: View {
                     Text("Near the cursor").tag(PanelPosition.nearCursor)
                     Text("Centred on the active screen").tag(PanelPosition.activeScreenCentre)
                 }
-                autoPaste
                 Toggle("Launch Pano at login", isOn: toggle(\.launchAtLogin, onLaunchAtLoginChanged))
                 Toggle("Show icon in the menu bar", isOn: toggle(\.showMenuBarIcon, onMenuBarIconChanged))
                 if !prefs.showMenuBarIcon {
@@ -102,7 +93,7 @@ public struct SettingsView: View {
                     }
                 }
                 Toggle("Render Markdown", isOn: $prefs.renderMarkdown)
-                note("Markdown clips open formatted; ⇧⏎ still pastes the raw text.")
+                note("Markdown clips open formatted; ⇧⏎ still copies the raw text.")
                 Toggle("Read text in images", isOn: toggle(\.ocrEnabled, onOCRChanged))
                 note("Makes screenshots searchable. Uses macOS Vision on your Mac; nothing leaves it.")
             }
@@ -206,35 +197,6 @@ public struct SettingsView: View {
     }
 
     private static let websiteURL = URL(string: "https://pano-app.com") ?? URL(fileURLWithPath: "/")
-
-    // MARK: Paste automatically
-
-    /// Off by default. Turning it on asks macOS for nothing: Pano never posts an event before the
-    /// permission is granted, so macOS never raises its own dialog and never adds Pano to the list
-    /// by itself (docs/adr/0003, second addendum). The user adds Pano in System Settings, and these
-    /// steps and buttons are there to make that one manual step easy.
-    @ViewBuilder private var autoPaste: some View {
-        Toggle("Paste automatically", isOn: $prefs.autoPaste)
-        if prefs.autoPaste && !trusted {
-            VStack(alignment: .leading, spacing: 6) {
-                note("Pano needs your permission to press ⌘V. Until you give it, ⏎ copies and you press ⌘V.")
-                note("1. Open System Settings. It opens at the right list under Privacy & Security.")
-                note("2. Click + and choose Pano, or drag Pano in from Finder.")
-                note("3. Turn Pano on. Pano picks it up as soon as you come back.")
-                HStack(spacing: 8) {
-                    Button("Open System Settings") { PasteService.openSettingsPane() }
-                        .pointer()
-                        .accessibilityHint("Opens the list where you allow Pano to press ⌘V")
-                    Button("Show Pano in Finder") { PasteService.revealAppInFinder() }
-                        .pointer()
-                        .accessibilityHint("Selects Pano in Finder so you can drag it into the list")
-                }
-                .padding(.top, 2)
-            }
-        } else if !prefs.autoPaste {
-            note("⏎ copies the clip; you press ⌘V. Turn this on to let Pano press ⌘V for you.")
-        }
-    }
 
     // MARK: Helpers
 

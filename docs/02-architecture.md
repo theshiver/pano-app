@@ -65,27 +65,15 @@ cursor, clamped so the panel never crosses a screen edge.
 
 ## Paste-back
 
-`PasteService` in `PanoCore`, with exactly one public entry point:
+`PasteService.write(_:)` in `PanoCore`: the chosen payload goes on the
+pasteboard, the item's stored types in their stored order, each file URL as its
+own `NSPasteboardItem` via `writeObjects`, the rest on the first item with
+`setData`. The panel hides first so the user is back in their app, and they
+press ⌘V. Pano does not post the keystroke itself (`adr/0008`).
 
-```
-func paste(_ item: ClipItem, transformed: Transform?, mode: PasteMode) async throws
-```
-
-Implementation order:
-
-1. Write the chosen payload: the item's stored types in their stored order, each
-   file URL as its own `NSPasteboardItem` via `writeObjects`, the rest on the
-   first item with `setData`.
-2. Hide the panel and let the previous app regain key focus.
-3. If auto-paste is enabled and `AXIsProcessTrusted()` is true, post ⌘V with
-   `CGEvent` on the session event tap. If not, show a lightweight hint and stop.
-
-There is no snapshot and no restore. The pasted item is now the clipboard; the
+There is no snapshot and no restore. The chosen item is now the clipboard; the
 capture loop notices the change and moves the item to the top of history by
 hash match instead of inserting a duplicate.
-
-Why `CGEvent.post` and not Apple Events, and what the week 0 spike measured, is
-in `adr/0003` and `04-permissions.md`. Do not change this without reading both.
 
 ## Search
 

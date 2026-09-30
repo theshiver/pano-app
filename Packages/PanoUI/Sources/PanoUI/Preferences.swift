@@ -23,15 +23,10 @@ public final class Preferences {
     public var retentionImageDays: Int { didSet { defaults.set(retentionImageDays, forKey: Key.retentionImageDays) } }
     public var retentionOtherDays: Int { didSet { defaults.set(retentionOtherDays, forKey: Key.retentionOtherDays) } }
     public var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Key.launchAtLogin) } }
-    /// Whether ⏎ also sends a ⌘V keystroke to the app the user came from, instead of only putting the
-    /// clip on the pasteboard. Off until the user asks for it: while it is off Pano posts no events
-    /// at all, so macOS never raises the "would like to control this Mac" prompt (docs/adr/0003).
-    public var autoPaste: Bool { didSet { defaults.set(autoPaste, forKey: Key.autoPaste) } }
     /// Set when the user answers the "press ⌘V" hint with "Don't remind me". Until then the hint
-    /// appears after every ⏎ that did not reach the other app, because an ⏎ that silently does
-    /// nothing visible reads as a broken app.
-    public var autoPasteHintDismissed: Bool {
-        didSet { defaults.set(autoPasteHintDismissed, forKey: Key.autoPasteHintDismissed) }
+    /// appears after every ⏎, because an ⏎ that visibly does nothing reads as a broken app.
+    public var copyHintDismissed: Bool {
+        didSet { defaults.set(copyHintDismissed, forKey: Key.copyHintDismissed) }
     }
     /// Set once the first-run window has been shown, so it is not shown again on later launches.
     public var hasSeenOnboarding: Bool { didSet { defaults.set(hasSeenOnboarding, forKey: Key.hasSeenOnboarding) } }
@@ -54,8 +49,7 @@ public final class Preferences {
         retentionImageDays = defaults.object(forKey: Key.retentionImageDays) as? Int ?? 7
         retentionOtherDays = defaults.object(forKey: Key.retentionOtherDays) as? Int ?? 30
         launchAtLogin = defaults.bool(forKey: Key.launchAtLogin)
-        autoPaste = defaults.bool(forKey: Key.autoPaste)  // opt-in, see the property
-        autoPasteHintDismissed = defaults.bool(forKey: Key.autoPasteHintDismissed)
+        copyHintDismissed = defaults.bool(forKey: Key.copyHintDismissed)
         hasSeenOnboarding = defaults.bool(forKey: Key.hasSeenOnboarding)
         showMenuBarIcon = defaults.object(forKey: Key.showMenuBarIcon) as? Bool ?? true
         ocrEnabled = defaults.object(forKey: Key.ocrEnabled) as? Bool ?? true
@@ -97,8 +91,7 @@ public final class Preferences {
         static let retentionImageDays = "retentionImageDays"
         static let retentionOtherDays = "retentionOtherDays"
         static let launchAtLogin = "launchAtLogin"
-        static let autoPaste = "autoPaste"
-        static let autoPasteHintDismissed = "autoPasteHintDismissed"
+        static let copyHintDismissed = "copyHintDismissed"
         static let hasSeenOnboarding = "hasSeenOnboarding"
         static let ocrEnabled = "ocrEnabled"
         static let maskSecrets = "maskSecrets"
