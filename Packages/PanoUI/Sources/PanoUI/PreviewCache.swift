@@ -140,10 +140,10 @@ public final class PreviewCache {
         }
     }
 
-    nonisolated static func decodeDownsampledImage(from data: Data, maxPixelSize: Int) -> NSImage? {
+    nonisolated static func decodeDownsampledCGImage(from data: Data, maxPixelSize: Int) -> CGImage? {
         let options: [CFString: Any] = [kCGImageSourceShouldCache: false]
         guard let source = CGImageSourceCreateWithData(data as CFData, options as CFDictionary) else {
-            return NSImage(data: data)
+            return nil
         }
         let thumbOptions: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -151,9 +151,13 @@ public final class PreviewCache {
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ]
-        if let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) {
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary)
+    }
+
+    static func makeImage(from cgImage: CGImage?, fallbackData: Data) -> NSImage? {
+        if let cgImage {
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
-        return NSImage(data: data)
+        return NSImage(data: fallbackData)
     }
 }

@@ -394,10 +394,12 @@ private struct ImagePreview: View {
             loaded = false
             image = nil
             if let data = await model.imageData(for: item.id) {
-                let decoded = await Task.detached(priority: .userInitiated) {
-                    PreviewCache.decodeDownsampledImage(from: data, maxPixelSize: 1600)
+                let cgImage = await Task.detached(priority: .userInitiated) {
+                    PreviewCache.decodeDownsampledCGImage(from: data, maxPixelSize: 1600)
                 }.value
-                if let decoded, !Task.isCancelled {
+                if !Task.isCancelled,
+                    let decoded = PreviewCache.makeImage(from: cgImage, fallbackData: data)
+                {
                     PreviewCache.shared.setImage(decoded, for: item.id)
                     image = decoded
                 }

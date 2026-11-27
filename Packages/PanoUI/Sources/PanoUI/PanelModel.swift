@@ -276,9 +276,10 @@ public final class PanelModel {
     public func thumbnail(for id: Int64) async -> NSImage? {
         if let cached = PreviewCache.shared.thumbnail(for: id) { return cached }
         guard let data = await imageData(for: id) else { return nil }
-        let image = await Task.detached(priority: .utility) {
-            PreviewCache.decodeDownsampledImage(from: data, maxPixelSize: 64)
+        let cgImage = await Task.detached(priority: .utility) {
+            PreviewCache.decodeDownsampledCGImage(from: data, maxPixelSize: 64)
         }.value
+        let image = PreviewCache.makeImage(from: cgImage, fallbackData: data)
         if let image { PreviewCache.shared.setThumbnail(image, for: id) }
         return image
     }
