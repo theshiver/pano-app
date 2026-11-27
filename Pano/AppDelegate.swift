@@ -1,11 +1,10 @@
 import AppKit
+import Carbon.HIToolbox
 import PanoCore
 import PanoStore
 import PanoUI
 import SwiftUI
 
-/// Wires the pieces together on launch: opens the store, starts the capture loop, builds the
-/// panel, and binds the global hotkey that toggles it.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var store: Store?
@@ -18,7 +17,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pasteHint: PasteHintController?
     private var settings: SettingsController?
     private var prefs: Preferences?
+    private var sweepTask: Task<Void, Never>?
     private var isPaused = false
+
+    #if DIRECT_DISTRIBUTION
+        private let supportsAutoPaste = true
+    #else
+        private let supportsAutoPaste = false
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let store: Store
@@ -35,7 +41,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let prefs = Preferences()
         self.prefs = prefs
-        Task { await store.setRetention(prefs.retentionRules) }
+        Task {
+            await store.setRetention(prefs.retentionRules)
+            _ = try? await store.sweepExpired()
+        }
+        startRetentionSweepLoop(store: store)
 
         let engine = CaptureEngine(store: store)
         self.engine = engine
@@ -46,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await engine.setOnChange { [weak self] in
                 Task { @MainActor [weak self] in
                     guard let self, self.panel?.isVisible == true else { return }
-                    self.model?.reload()
+                    self.model?.reload(refreshChrome: true)
                 }
             }
             await engine.start()
@@ -55,32 +65,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panel = PanelController(prefs: prefs)
         self.panel = panel
 
-        // Tells the user the clip is on the clipboard and to press ⌘V.
         let hint = PasteHintController(prefs: prefs)
         self.pasteHint = hint
         hint.showForDebugIfRequested()
 
         let actions = PanelActions(
-            paste: { [weak panel] id, plainText in
-                // Hide first so the user is back in their app, then put the clip on the clipboard
-                // for them to paste with ⌘V. Pano does not paste itself (docs/adr/0008).
+            paste: { [weak self, weak panel] id, plainText in
                 Task { @MainActor in
-                    panel?.hide()
+                    panel?.hide(animated: false)
                     var payload = (try? await store.payload(of: id)) ?? []
                     if plainText, let plain = payload.first(where: { $0.uti == "public.utf8-plain-text" }) {
-                        payload = [plain]  // ⇧⏎: without formatting
+                        payload = [plain]
                     }
-                    PasteService.write(payload)
-                    hint.showIfNeeded()
+                    await self?.deliverPaste(payload: payload, prefs: prefs, hint: hint)
                 }
             },
-            pasteText: { [weak panel] text, html in
+            pasteText: { [weak self, weak panel] text, html in
                 Task { @MainActor in
-                    panel?.hide()
+                    panel?.hide(animated: false)
                     var payload = [("public.utf8-plain-text", Data(text.utf8))]
                     if let html { payload.insert(("public.html", Data(html.utf8)), at: 0) }
-                    PasteService.write(payload)
-                    hint.showIfNeeded()
+                    await self?.deliverPaste(payload: payload, prefs: prefs, hint: hint)
                 }
             },
             close: { [weak panel] in
@@ -92,27 +97,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         let model = PanelModel(store: store, actions: actions)
         model.prefs = prefs
+        model.supportsAutoPaste = supportsAutoPaste
+        model.searchDebounce = .milliseconds(35)
+        #if DIRECT_DISTRIBUTION
+            model.isAccessibilityTrusted = { AutoPasteService.isTrusted }
+        #endif
         model.onOCRChanged = { [weak self] enabled in Task { await self?.engine?.setOCREnabled(enabled) } }
         self.model = model
         panel.setContent(PanelView(model: model), model: model)
 
         installHotKey()
-
         setUpStatusItem(visible: prefs.showMenuBarIcon)
 
-        // Off the launch path but on the main thread, which the importer requires. See its comment:
-        // this is ~330 ms that would otherwise land on the first panel open.
         Task { @MainActor in RichPreview.prewarm() }
 
-        let onboarding = OnboardingController(prefs: prefs)
+        let onboarding = OnboardingController(prefs: prefs, supportsAutoPaste: supportsAutoPaste) {
+            [weak self] loadSamples, enableAutoPaste in
+            #if DIRECT_DISTRIBUTION
+                prefs.autoPaste = enableAutoPaste
+            #endif
+            if loadSamples {
+                Task {
+                    await StarterSeed.seedIfEmpty(store)
+                    await MainActor.run { self?.model?.reload(selectTop: true, refreshChrome: true) }
+                }
+            }
+        }
         self.onboarding = onboarding
         onboarding.showIfNeeded()
 
+        #if DIRECT_DISTRIBUTION
+            let isTrusted = { AutoPasteService.isTrusted }
+            let openAccessibility = { AutoPasteService.openSettingsPane() }
+            let revealApp = { AutoPasteService.revealAppInFinder() }
+        #else
+            let isTrusted = { false }
+            let openAccessibility = {}
+            let revealApp = {}
+        #endif
+
         settings = SettingsController(
-            prefs: prefs, store: store,
+            prefs: prefs,
+            store: store,
+            supportsAutoPaste: supportsAutoPaste,
+            isAccessibilityTrusted: isTrusted,
+            onOpenAccessibilitySettings: openAccessibility,
+            onRevealAppInFinder: revealApp,
             onHotKeyChanged: { [weak self] in
                 self?.installHotKey()
-                self?.refreshStatusItem()  // the menu shows the shortcut
+                self?.refreshStatusItem()
             },
             onExclusionsChanged: { [weak self] in self?.reloadExclusions() },
             onOCRChanged: { [weak self] enabled in
@@ -124,13 +157,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onMaskSecretsChanged: { [weak self] enabled in
                 Task { await self?.engine?.setMaskSecrets(enabled) }
             },
-            onHighlightChanged: { [weak self] _ in self?.model?.reload() },
-            onThemeChanged: { [weak self] _ in self?.model?.reload() }
+            onHighlightChanged: { [weak self] _ in self?.model?.reload(refreshChrome: false) },
+            onThemeChanged: { [weak self] _ in self?.model?.reload(refreshChrome: false) },
+            onRetentionChanged: { [weak self] in self?.model?.reload(refreshChrome: true) },
+            onClearLastHour: { [weak self] in self?.clearRecent(seconds: 3600) },
+            onClearAllHistory: { [weak self] in self?.clearHistory() },
+            isCapturePaused: { [weak self] in self?.isPaused ?? false },
+            onToggleCapturePaused: { [weak self] paused in self?.setCapturePaused(paused) }
         )
     }
 
-    /// (Re)registers the global hotkey from the current preference. Reassigning the property lets
-    /// the old GlobalHotKey deinit unregister itself first.
+    private func deliverPaste(payload: [(uti: String, data: Data)], prefs: Preferences, hint: PasteHintController) async
+    {
+        PasteService.write(payload)
+        ReviewPrompt.recordCopyAndPromptIfEligible(prefs: prefs)
+        #if DIRECT_DISTRIBUTION
+            let pasted = await AutoPasteService.pasteAfterHide(auto: prefs.autoPaste)
+            if !pasted { hint.showIfNeeded() }
+        #else
+            hint.showIfNeeded()
+        #endif
+    }
+
+    private func startRetentionSweepLoop(store: Store) {
+        sweepTask?.cancel()
+        sweepTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3600))
+                guard !Task.isCancelled else { return }
+                _ = try? await store.sweepExpired()
+            }
+        }
+    }
+
     private func reloadExclusions() {
         guard let store, let engine else { return }
         Task { await engine.setExcludedBundleIds((try? await store.excludedBundleIds()) ?? []) }
@@ -145,9 +204,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Menu bar
 
-    /// The menu-bar item: open the panel, pause/resume capture, clear history, Settings, quit. The
-    /// app is an accessory (LSUIElement) with no Dock icon, so this is the everyday entry point.
-    /// It can be hidden in Settings; the panel's ⚙︎ then opens Settings, where ⌘Q still quits.
     private func setUpStatusItem(visible: Bool) {
         guard visible else {
             if let statusItem { NSStatusBar.system.removeStatusItem(statusItem) }
@@ -163,7 +219,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshStatusItem()
     }
 
-    /// Paused capture dims the icon so the state is visible without opening the menu.
     private func refreshStatusItem() {
         statusItem?.button?.appearsDisabled = isPaused
         statusItem?.button?.toolTip = isPaused ? String(localized: "Pano — paused") : "Pano"
@@ -173,27 +228,88 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
         let open = menu.addItem(
-            withTitle: String(localized: "Open Pano"), action: #selector(openPanel), keyEquivalent: "")
+            withTitle: String(localized: "Open Pano"), action: #selector(openPanel), keyEquivalent: ""
+        )
         open.target = self
-        open.keyEquivalentModifierMask = []
-        open.title = String(localized: "Open Pano") + "\t" + (prefs?.hotKeyDisplay ?? "")
+        if let prefs {
+            let eq = Self.menuKeyEquivalent(for: prefs.hotKeyCode)
+            open.keyEquivalent = eq
+            open.keyEquivalentModifierMask = Self.cocoaModifiers(from: prefs.hotKeyModifiers)
+        }
 
         let pause = menu.addItem(
-            withTitle: String(localized: "Pause capture"), action: #selector(togglePause), keyEquivalent: "")
+            withTitle: String(localized: "Pause capture"), action: #selector(togglePause), keyEquivalent: ""
+        )
         pause.target = self
         pause.state = isPaused ? .on : .off
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "Clear History…"), action: #selector(clearHistory), keyEquivalent: "")
-            .target = self
+        let clearMenu = NSMenu()
+        clearMenu.addItem(
+            withTitle: String(localized: "Last 15 Minutes"), action: #selector(clearLast15Minutes), keyEquivalent: ""
+        ).target = self
+        clearMenu.addItem(
+            withTitle: String(localized: "Last Hour"), action: #selector(clearLastHour), keyEquivalent: ""
+        ).target = self
+        clearMenu.addItem(.separator())
+        clearMenu.addItem(
+            withTitle: String(localized: "All Unpinned…"), action: #selector(clearHistory), keyEquivalent: ""
+        ).target = self
+        let clearRoot = NSMenuItem(title: String(localized: "Clear History"), action: nil, keyEquivalent: "")
+        clearRoot.submenu = clearMenu
+        menu.addItem(clearRoot)
+
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
             .target = self
 
         menu.addItem(.separator())
         menu.addItem(
             withTitle: String(localized: "Quit Pano"), action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q")
+            keyEquivalent: "q"
+        )
         return menu
+    }
+
+    private static func cocoaModifiers(from carbon: UInt32) -> NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if carbon & UInt32(cmdKey) != 0 { flags.insert(.command) }
+        if carbon & UInt32(shiftKey) != 0 { flags.insert(.shift) }
+        if carbon & UInt32(optionKey) != 0 { flags.insert(.option) }
+        if carbon & UInt32(controlKey) != 0 { flags.insert(.control) }
+        return flags
+    }
+
+    private static func menuKeyEquivalent(for keyCode: UInt32) -> String {
+        switch Int(keyCode) {
+        case kVK_ANSI_A: return "a"
+        case kVK_ANSI_B: return "b"
+        case kVK_ANSI_C: return "c"
+        case kVK_ANSI_D: return "d"
+        case kVK_ANSI_E: return "e"
+        case kVK_ANSI_F: return "f"
+        case kVK_ANSI_G: return "g"
+        case kVK_ANSI_H: return "h"
+        case kVK_ANSI_I: return "i"
+        case kVK_ANSI_J: return "j"
+        case kVK_ANSI_K: return "k"
+        case kVK_ANSI_L: return "l"
+        case kVK_ANSI_M: return "m"
+        case kVK_ANSI_N: return "n"
+        case kVK_ANSI_O: return "o"
+        case kVK_ANSI_P: return "p"
+        case kVK_ANSI_Q: return "q"
+        case kVK_ANSI_R: return "r"
+        case kVK_ANSI_S: return "s"
+        case kVK_ANSI_T: return "t"
+        case kVK_ANSI_U: return "u"
+        case kVK_ANSI_V: return "v"
+        case kVK_ANSI_W: return "w"
+        case kVK_ANSI_X: return "x"
+        case kVK_ANSI_Y: return "y"
+        case kVK_ANSI_Z: return "z"
+        case kVK_Space: return " "
+        default: return ""
+        }
     }
 
     @objc private func openPanel() {
@@ -206,11 +322,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePause() {
-        isPaused.toggle()
-        let paused = isPaused
+        setCapturePaused(!isPaused)
+    }
+
+    private func setCapturePaused(_ paused: Bool) {
+        isPaused = paused
         Task { await engine?.setPaused(paused) }
         refreshStatusItem()
-        statusItem?.button?.appearsDisabled = paused
+    }
+
+    @objc private func clearLast15Minutes() {
+        clearRecent(seconds: 900)
+    }
+
+    @objc private func clearLastHour() {
+        clearRecent(seconds: 3600)
+    }
+
+    private func clearRecent(seconds: TimeInterval) {
+        let cutoff = Date().addingTimeInterval(-seconds)
+        Task { @MainActor in
+            _ = try? await store?.clearHistory(since: cutoff)
+            PreviewCache.shared.clearAll()
+            model?.reload(refreshChrome: true)
+        }
     }
 
     @objc private func clearHistory() {
@@ -226,13 +361,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task { @MainActor in
             _ = try? await store?.clearHistory()
-            model?.reload()
+            PreviewCache.shared.clearAll()
+            model?.reload(refreshChrome: true)
         }
     }
 
-    /// Shows the panel immediately with the current history, then runs one capture tick so the
-    /// just-copied item shows up even if the 0.5 s poll has not fired yet. The tick can be slow
-    /// (decoding a copied image file), so it must not block the panel from appearing.
     private func toggle() {
         guard let panel else { return }
         if panel.isVisible {
@@ -242,18 +375,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model?.activate()
         panel.show()
         Task { @MainActor in
-            if await engine?.tick() != nil { model?.reload() }
+            if await engine?.tick() != nil { model?.reload(refreshChrome: true) }
         }
     }
 
-    /// `PANO_STORE_FOLDER` (Debug builds) picks a sibling folder inside the container (demo data for
-    /// screenshots, see DemoSeed.swift); the real history is never touched.
     private static func storeFolder() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         #if DEBUG
             let name = ProcessInfo.processInfo.environment["PANO_STORE_FOLDER"] ?? "Pano"
         #else
-            let name = "Pano"  // no environment hooks in a shipping build
+            let name = "Pano"
         #endif
         return base.appendingPathComponent(name, isDirectory: true)
     }

@@ -53,3 +53,12 @@ is to leave the Mac App Store and ship the auto-paste build as a notarized DMG
 and a Homebrew cask, which also reopens the "Mac App Store only" line in
 `CLAUDE.md`. Not before there is demand: a second channel is ongoing work for a
 part-time project (Developer ID signing, notarization, an update mechanism).
+
+## Addendum — 2026-11-27: Dual distribution in v1.1
+
+Starting with v1.1, Pano keeps the sandboxed Mac App Store build (`Pano`,
+copy-only, zero Accessibility APIs) and adds a second non-sandboxed target
+(`PanoDirect`, compiled with `DIRECT_DISTRIBUTION`) for GitHub Releases DMG and
+Homebrew Cask distribution with opt-in `CGEvent` auto-paste isolated in
+`Pano/AutoPasteService.swift`. The shared Swift packages remain free of
+Accessibility or event-posting code.

@@ -2,18 +2,23 @@ import AppKit
 import PanoUI
 import SwiftUI
 
-/// The first-run window: teaches ⌘⇧V and gets out of the way. Shown once per install and never a
-/// permission gate: it asks macOS for nothing (docs/adr/0008).
 @MainActor
 final class OnboardingController {
     private let prefs: Preferences
+    private let supportsAutoPaste: Bool
+    private let onComplete: (_ loadSamples: Bool, _ enableAutoPaste: Bool) -> Void
     private var window: NSWindow?
 
-    init(prefs: Preferences) { self.prefs = prefs }
+    init(
+        prefs: Preferences,
+        supportsAutoPaste: Bool,
+        onComplete: @escaping (_ loadSamples: Bool, _ enableAutoPaste: Bool) -> Void
+    ) {
+        self.prefs = prefs
+        self.supportsAutoPaste = supportsAutoPaste
+        self.onComplete = onComplete
+    }
 
-    /// The window is shown once per install and the flag lives in the app's sandbox container, which
-    /// is TCC-protected — so on a dev machine there is no way to get a first run back from outside
-    /// the app. `PANO_FORCE_ONBOARDING=1` (Debug builds) shows it anyway, without writing the flag.
     private var forceOnboarding: Bool {
         #if DEBUG
             return ProcessInfo.processInfo.environment["PANO_FORCE_ONBOARDING"] == "1"
@@ -22,7 +27,6 @@ final class OnboardingController {
         #endif
     }
 
-    /// Shows the window once per install, whatever the permission state.
     @discardableResult
     func showIfNeeded() -> Bool {
         if forceOnboarding {
@@ -39,7 +43,7 @@ final class OnboardingController {
         let window =
             self.window
             ?? NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: OnboardingView.width, height: 520),
+                contentRect: NSRect(x: 0, y: 0, width: OnboardingView.width, height: 460),
                 styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered, defer: false
             )
@@ -47,16 +51,27 @@ final class OnboardingController {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
-        let hosting = NSHostingView(rootView: OnboardingView(onDone: { [weak self] in self?.close() }))
-        // `.intrinsicContentSize` too, or `fittingSize` below is `.zero` (see PasteHintController).
+        let hosting = NSHostingView(
+            rootView: OnboardingView(
+                hotKeyDisplay: prefs.hotKeyDisplay,
+                supportsAutoPaste: supportsAutoPaste
+            ) { [weak self] loadSamples, enableAutoPaste in
+                self?.onComplete(loadSamples, enableAutoPaste)
+                self?.close()
+            }
+        )
         hosting.sizingOptions = [.preferredContentSize, .intrinsicContentSize]
         window.contentView = hosting
         window.setContentSize(hosting.fittingSize)
         window.center()
-        window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
-        NSApp.activate(ignoringOtherApps: true)
         self.window = window
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
+        DispatchQueue.main.async {
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     private func close() {

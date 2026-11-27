@@ -6,6 +6,35 @@ All notable changes to Pano are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1] - 2026-11-27
+
+### Added
+
+- Dual distribution: sandboxed Mac App Store build (`Pano`, copy-only) and direct
+  DMG / Homebrew Cask target (`PanoDirect`, opt-in Accessibility auto-paste).
+- New Tri-Pane app icon and crisp vector template menu bar icon.
+- Resizable panel (remembers size), auto-dismiss on click outside, row hover
+  highlight, right-click row context menu, and image thumbnails in the list.
+- Feature discovery: clickable quick-filter strip (`Code`, `Images · OCR`,
+  `Colours`, `Pinned`), optional 3-clip onboarding starter pack, and dismissible
+  contextual tips.
+- Quick privacy cleanup: Clear Last 15 Minutes / Last Hour from the menu bar,
+  separate text vs image retention pickers, secret expiry picker, and Pause
+  capture in Settings.
+- Gentle Mac App Store review prompt after sustained usage.
+
+### Fixed
+
+- Rich text preview layout jump: bounded LRU preview cache, background neighbor
+  prefetch, font size normalization, and HTML background color stripping.
+- Automatic retention sweeping (`sweepExpired`) wired at launch, hourly, and on
+  Settings changes so expired clips and 1-hour secrets are actually removed.
+- Performance: SQLite WAL mode, composite `(is_pinned DESC, last_seen_at DESC)`
+  index, search debouncing, cached transform/language/swatch/icon lookups, and
+  whitelist-first pasteboard reads.
+- Accessibility: StatusBar Settings button is no longer swallowed by VoiceOver,
+  and HotKeyRecorderField formats Space, Return, Tab, arrows, and F-keys cleanly.
+
 ## [1.0] - 2026-09-22
 
 First release.

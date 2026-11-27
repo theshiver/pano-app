@@ -2,15 +2,12 @@ import PanoStore
 import PanoTransforms
 import SwiftUI
 
-/// The right-hand preview: a header with the source, time and transform chips; the body (raw text,
-/// a transformed value, or a colour swatch + format list); and the keyboard-hint footer.
 struct PreviewPane: View {
     @Bindable var model: PanelModel
     @Environment(\.colorScheme) private var scheme
-    /// The last highlight result and the clip/theme it belongs to; computed off the main actor.
     @State private var highlighted: (id: Int64, theme: String, result: CodeText.Result)?
-    /// A rich-text clip rendered from its own RTF/HTML, loaded off the row's plain text.
     @State private var rich: (id: Int64, text: AttributedString)?
+    @State private var markdownRendered: (key: String, text: AttributedString)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -19,6 +16,7 @@ struct PreviewPane: View {
                 Divider()
                 body(for: item)
                 Spacer(minLength: 0)
+                contextualTip(for: item)
                 footer
             } else {
                 Spacer()
@@ -39,33 +37,39 @@ struct PreviewPane: View {
             )
             .font(Theme.rowMeta)
             .foregroundStyle(Theme.secondary(scheme))
-            Spacer()
-            if item.kind == .code {
-                chip("Highlight", active: model.highlightCode, label: "Syntax highlighting") { model.toggleHighlight() }
-            }
-            if model.hasImage(item) {
-                chip("OCR", active: model.ocrEnabled, label: "Read text in images") { model.toggleOCR() }
-            }
-            ForEach(model.availableTransforms, id: \.id) { transform in
-                chip(
-                    transform.title, active: model.activeTransformId == transform.id,
-                    label: "\(transform.title) transform"
-                ) {
-                    model.toggleTransform(transform.id)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            Spacer(minLength: 6)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    if item.kind == .code {
+                        chip("Highlight", active: model.highlightCode, label: "Syntax highlighting") {
+                            model.toggleHighlight()
+                        }
+                    }
+                    if model.hasImage(item) {
+                        chip("OCR", active: model.ocrEnabled, label: "Read text in images") { model.toggleOCR() }
+                    }
+                    ForEach(model.availableTransforms, id: \.id) { transform in
+                        chip(
+                            transform.title, active: model.activeTransformId == transform.id,
+                            label: "\(transform.title) transform"
+                        ) {
+                            model.toggleTransform(transform.id)
+                        }
+                    }
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 12)
-        .frame(height: Theme.searchHeight)  // same height as the search row so the dividers line up
+        .frame(height: Theme.searchHeight)
         .contentShape(Rectangle())
-        .gesture(WindowDragGesture())  // header doubles as the panel's title-bar drag handle
+        .gesture(WindowDragGesture())
     }
 
-    /// "code · swift" when the language is known, otherwise the kind ("text", "image", "url"...).
     private func kindLabel(_ item: ClipListItem) -> String {
-        if item.kind == .code, model.highlightCode, let content = item.content,
-            let language = CodeHighlighter.detectLanguage(String(content.prefix(4000)))
-        {
+        if item.kind == .code, model.highlightCode, let language = PreviewCache.shared.language(for: item) {
             return "code · \(language.rawValue)"
         }
         return item.kind == .richtext ? "rich text" : item.kind.rawValue
@@ -76,14 +80,14 @@ struct PreviewPane: View {
             Text(title)
                 .font(Theme.chipFont)
                 .padding(.horizontal, 7)
-                .padding(.vertical, 2)
+                .padding(.vertical, 2.5)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
                         .fill(active ? Theme.accent : Color.clear)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(active ? Color.clear : Theme.secondary(scheme).opacity(0.4), lineWidth: 1)
+                        .stroke(active ? Color.clear : Theme.secondary(scheme).opacity(0.35), lineWidth: 1)
                 )
                 .foregroundStyle(active ? Color.white : Theme.secondary(scheme))
         }
@@ -103,20 +107,45 @@ struct PreviewPane: View {
             colourFormats(output.formats)
         } else {
             let wantsCode = wantsHighlight(item)
+            let cachedCode = wantsCode ? PreviewCache.shared.highlight(for: item.id, theme: model.syntaxTheme) : nil
             let code =
-                wantsCode && highlighted?.id == item.id && highlighted?.theme == model.syntaxTheme
-                ? highlighted?.result : nil
+                cachedCode
+                ?? (wantsCode && highlighted?.id == item.id && highlighted?.theme == model.syntaxTheme
+                    ? highlighted?.result : nil)
+
+            let cachedRich =
+                (item.kind == .richtext && model.activeTransform == nil)
+                ? PreviewCache.shared.rich(for: item.id) : nil
+            let resolvedRich =
+                cachedRich
+                ?? (item.kind == .richtext && model.activeTransform == nil && rich?.id == item.id
+                    ? rich?.text : nil)
+
+            let mdKey = "\(item.id)-\(model.activeTransformId ?? "")"
+            let cachedMarkdown = (model.transformOutput?.html != nil) ? PreviewCache.shared.markdown(for: item.id) : nil
+            let resolvedMarkdown = cachedMarkdown ?? (markdownRendered?.key == mdKey ? markdownRendered?.text : nil)
+
             let preview = CodeText.preview(model.transformOutput?.text ?? item.content ?? "—")
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     Group {
                         if let code {
                             Text(code.text)
-                        } else if let html = model.transformOutput?.html, let rich = RichPreview.attributed(html: html)
-                        {
-                            Text(rich)
-                        } else if item.kind == .richtext, model.activeTransform == nil, rich?.id == item.id, let rich {
-                            Text(rich.text)
+                        } else if model.transformOutput?.html != nil {
+                            if let resolvedMarkdown {
+                                Text(resolvedMarkdown)
+                            } else {
+                                Text(preview.text).font(Theme.previewBody)
+                            }
+                        } else if item.kind == .richtext, model.activeTransform == nil {
+                            if let resolvedRich {
+                                Text(resolvedRich)
+                            } else {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .frame(maxWidth: .infinity, minHeight: 80, alignment: .center)
+                            }
                         } else {
                             Text(preview.text)
                                 .font(Theme.previewBody)
@@ -130,42 +159,112 @@ struct PreviewPane: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
+                .padding(14)
             }
             .background(code?.background ?? .clear)
-            .transition(.opacity)
             .id(model.activeTransformId ?? "raw")
-            .animation(.easeInOut(duration: 0.09), value: model.activeTransformId)
             .task(id: "rich-\(item.id)") {
-                guard item.kind == .richtext else { return }
-                // Settle first. These `.task` bodies inherit the view's MainActor isolation, and
-                // AppKit's HTML importer is main-thread-only, so without a cancellation point ahead
-                // of it every item the selection passes through gets parsed in full — which is what
-                // made arrowing quickly through the list stick. `.task(id:)` cancels the previous
-                // run when the selection moves; this gives that cancellation somewhere to land.
-                guard await settled() else { return }
+                guard item.kind == .richtext, PreviewCache.shared.rich(for: item.id) == nil else { return }
                 let payload = await model.payload(for: item.id)
-                if let text = RichPreview.attributed(payload: payload), !Task.isCancelled { rich = (item.id, text) }
+                guard !Task.isCancelled else { return }
+                if let text = RichPreview.attributed(payload: payload), !Task.isCancelled {
+                    PreviewCache.shared.setRich(text, for: item.id)
+                    rich = (item.id, text)
+                }
+            }
+            .task(id: "md-\(mdKey)") {
+                guard let html = model.transformOutput?.html else { return }
+                if let cached = PreviewCache.shared.markdown(for: item.id) {
+                    markdownRendered = (mdKey, cached)
+                    return
+                }
+                if let rendered = RichPreview.attributed(html: html), !Task.isCancelled {
+                    PreviewCache.shared.setMarkdown(rendered, for: item.id)
+                    markdownRendered = (mdKey, rendered)
+                }
             }
             .task(id: "\(item.id)-\(model.syntaxTheme)-\(wantsCode)") {
                 guard wantsCode, let content = item.content else { return }
+                let theme = model.syntaxTheme
+                if PreviewCache.shared.highlight(for: item.id, theme: theme) != nil { return }
                 guard await settled() else { return }
                 let (text, _) = CodeText.preview(content)
-                let language = CodeHighlighter.detectLanguage(String(text.prefix(4000)))
-                let theme = model.syntaxTheme
+                let language = PreviewCache.shared.language(for: item)
                 guard let result = await CodeText.shared.highlight(text, language: language, theme: theme) else {
                     return
                 }
-                if !Task.isCancelled { highlighted = (item.id, theme, result) }
+                if !Task.isCancelled {
+                    PreviewCache.shared.setHighlight(result, for: item.id, theme: theme)
+                    highlighted = (item.id, theme, result)
+                }
+            }
+            .task(id: "prefetch-\(item.id)-\(model.syntaxTheme)") {
+                try? await Task.sleep(for: .milliseconds(70))
+                guard !Task.isCancelled else { return }
+                for neighbor in model.neighborItems(around: item.id) {
+                    guard !Task.isCancelled else { return }
+                    if neighbor.kind == .richtext, PreviewCache.shared.rich(for: neighbor.id) == nil {
+                        let payload = await model.payload(for: neighbor.id)
+                        if let text = RichPreview.attributed(payload: payload), !Task.isCancelled {
+                            PreviewCache.shared.setRich(text, for: neighbor.id)
+                        }
+                    } else if model.highlightCode, neighbor.kind == .code, let content = neighbor.content,
+                        PreviewCache.shared.highlight(for: neighbor.id, theme: model.syntaxTheme) == nil
+                    {
+                        let (text, _) = CodeText.preview(content)
+                        let language = PreviewCache.shared.language(for: neighbor)
+                        if let res = await CodeText.shared.highlight(
+                            text, language: language, theme: model.syntaxTheme
+                        ), !Task.isCancelled {
+                            PreviewCache.shared.setHighlight(res, for: neighbor.id, theme: model.syntaxTheme)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    @ViewBuilder private func contextualTip(for item: ClipListItem) -> some View {
+        if let prefs = model.prefs {
+            if model.hasImage(item), let ocr = item.ocrText, !ocr.isEmpty, !prefs.ocrTipDismissed {
+                tipBanner("Text indexed on-device — search any word inside this image, or press ⇧⏎ to copy text.") {
+                    prefs.ocrTipDismissed = true
+                }
+            } else if model.activeTransform == nil,
+                model.availableTransforms.contains(where: { ["json", "jwt", "b64"].contains($0.id) }),
+                !prefs.transformTipDismissed
+            {
+                tipBanner("Tip: type json, jwt, or b64 in the search field to transform on the fly.") {
+                    prefs.transformTipDismissed = true
+                }
+            }
+        }
+    }
+
+    private func tipBanner(_ message: String, onDismiss: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.brandAccent)
+            Text(message)
+                .font(Theme.rowMeta)
+                .foregroundStyle(Theme.secondary(scheme))
+            Spacer(minLength: 4)
+            Button("Got it", action: onDismiss)
+                .font(Theme.rowMeta)
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.accent)
+                .pointer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.45))
     }
 
     private func wantsHighlight(_ item: ClipListItem) -> Bool {
         model.highlightCode && model.activeTransform == nil && item.kind == .code && item.content != nil
     }
 
-    /// A colour's formats: a large swatch, then one pasteable row per representation.
     private func colourFormats(_ formats: [TransformOutput.Format]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if let hex = formats.first(where: { $0.label == "HEX" })?.value {
@@ -181,7 +280,7 @@ struct PreviewPane: View {
                 } label: {
                     HStack {
                         Text(format.label).font(Theme.rowMeta).foregroundStyle(Theme.secondary(scheme))
-                            .frame(width: 56, alignment: .leading)
+                            .frame(width: 68, alignment: .leading)
                         Text(format.value).font(Theme.previewBody).textSelection(.enabled)
                         Spacer()
                     }
@@ -192,7 +291,7 @@ struct PreviewPane: View {
                 .accessibilityLabel("Copy \(format.label) \(format.value)")
             }
         }
-        .padding(12)
+        .padding(14)
     }
 
     private func centeredNote(_ text: String) -> some View {
@@ -200,7 +299,7 @@ struct PreviewPane: View {
             .font(Theme.previewBody)
             .foregroundStyle(Theme.secondary(scheme))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
+            .padding(14)
     }
 
     private var footer: some View {
@@ -209,26 +308,24 @@ struct PreviewPane: View {
                 .font(Theme.chipFont)
                 .foregroundStyle(Theme.secondary(scheme))
             Spacer()
-            Text("then ⌘V in your app")
-                .font(Theme.chipFont)
-                .foregroundStyle(Theme.secondary(scheme))
+            if !model.autoPasteActive {
+                Text("then ⌘V in your app")
+                    .font(Theme.chipFont)
+                    .foregroundStyle(Theme.secondary(scheme))
+            }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.vertical, 7)
     }
 
-    /// How long the selection has to hold still before the preview does expensive work. Roughly one
-    /// arrow-key repeat: hold the key and nothing is parsed, stop and the preview fills in at once.
-    private static let settleDelay = Duration.milliseconds(90)
+    private static let settleDelay = Duration.milliseconds(45)
 
-    /// `false` when the selection moved on while waiting, so the caller drops its work.
     private func settled() async -> Bool {
         try? await Task.sleep(for: Self.settleDelay)
         return !Task.isCancelled
     }
 
-    /// ⏎ copies; the user pastes with ⌘V (docs/adr/0008).
-    private let verb = "copy"
+    private var verb: String { model.autoPasteActive ? "paste" : "copy" }
 
     private var hint: String {
         let item = model.selectedItem
@@ -245,62 +342,75 @@ struct PreviewPane: View {
     }
 }
 
-/// Shows the actual image immediately (loaded async from the store); any OCR text runs in the
-/// background and appears underneath for reference, without replacing the visual preview.
 private struct ImagePreview: View {
     let item: ClipListItem
     let model: PanelModel
-    @State private var imageData: Data?
+    @State private var image: NSImage?
     @State private var loaded = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Group {
-                if let imageData, let nsImage = NSImage(data: imageData) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel("Copied image")
-                } else if loaded {
-                    // A file with no image preview: show its name/path instead of a spinner.
-                    Text(item.content ?? "File")
-                        .font(Theme.previewBody)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Group {
+                    if let resolved = PreviewCache.shared.image(for: item.id) ?? image {
+                        Image(nsImage: resolved)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 280)
+                            .accessibilityLabel("Copied image")
+                    } else if loaded {
+                        Text(item.content ?? "File")
+                            .font(Theme.previewBody)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(maxWidth: .infinity, minHeight: 120)
+                    }
                 }
-            }
-            .padding(12)
+                .padding(14)
 
-            if imageData != nil, model.ocrEnabled, let ocr = item.ocrText ?? item.content, !ocr.isEmpty {
-                Divider()
-                ScrollView {
+                if loaded || PreviewCache.shared.image(for: item.id) != nil, model.ocrEnabled,
+                    let ocr = item.ocrText ?? item.content, !ocr.isEmpty
+                {
+                    Divider()
                     Text(ocr)
                         .font(Theme.rowMeta)
                         .foregroundStyle(Theme.secondary(scheme))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
+                        .padding(14)
                 }
-                .frame(maxHeight: 140)
             }
         }
         .task(id: item.id) {
+            if let cached = PreviewCache.shared.image(for: item.id) {
+                image = cached
+                loaded = true
+                return
+            }
             loaded = false
-            imageData = await model.imageData(for: item.id)
-            loaded = true
+            image = nil
+            if let data = await model.imageData(for: item.id) {
+                let decoded = await Task.detached(priority: .userInitiated) {
+                    PreviewCache.decodeDownsampledImage(from: data, maxPixelSize: 1600)
+                }.value
+                if let decoded, !Task.isCancelled {
+                    PreviewCache.shared.setImage(decoded, for: item.id)
+                    image = decoded
+                }
+            }
+            if !Task.isCancelled { loaded = true }
         }
     }
 }
 
 extension Color {
-    /// Builds a Color from a #RRGGBB or #RRGGBBAA string (preview swatch, pinboard colours).
     init?(hex: String) {
         var s = hex
-        s.removeFirst()  // '#'
+        s.removeFirst()
         guard s.allSatisfy(\.isHexDigit), s.count == 6 || s.count == 8 else { return nil }
         func v(_ start: Int) -> Double {
             let i = s.index(s.startIndex, offsetBy: start)

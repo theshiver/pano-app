@@ -3,24 +3,26 @@ import PanoCore
 import PanoUI
 import SwiftUI
 
-/// Owns the non-activating `NSPanel` that hosts the SwiftUI panel (docs/adr/0005). A normal window
-/// would activate the app and steal key focus from whatever the user was pasting into; this panel
-/// takes keyboard focus without activating Pano, so the previous app stays frontmost for paste-back.
 @MainActor
-final class PanelController {
+final class PanelController: NSObject, NSWindowDelegate {
     private let panel: KeyablePanel
     private var model: PanelModel?
     private var keyMonitor: Any?
+    private var outsideClickMonitor: Any?
+    private var isHiding = false
     private let prefs: Preferences
 
     init(prefs: Preferences) {
         self.prefs = prefs
+        let width = max(CGFloat(prefs.panelWidth), Theme.minWindowWidth)
+        let height = max(CGFloat(prefs.panelHeight), Theme.minWindowHeight)
         panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 440),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless, .resizable],
             backing: .buffered,
             defer: true
         )
+        super.init()
         configure()
     }
 
@@ -31,9 +33,11 @@ final class PanelController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.isMovable = true  // dragged via WindowDragGesture on the header, status bar and rail
+        panel.isMovable = true
+        panel.minSize = NSSize(width: Theme.minWindowWidth, height: Theme.minWindowHeight)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.animationBehavior = .none
+        panel.delegate = self
     }
 
     func setContent(_ view: PanelView, model: PanelModel) {
@@ -44,13 +48,13 @@ final class PanelController {
     var isVisible: Bool { panel.isVisible }
 
     func show() {
-        installKeyMonitor()
+        isHiding = false
+        installMonitors()
         positionNearCursor()
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
-        model?.requestSearchFocus()  // only now can the field take it: the panel is key
-        model?.activate()  // fresh query, no stale filter: "opened" is here, not in the view's onAppear
-        // 140 ms open, slight fade (docs/05-design.md). Reduce Motion collapses it to instant.
+        model?.requestSearchFocus()
+        model?.activate()
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         NSAnimationContext.runAnimationGroup { context in
             context.duration = reduce ? 0 : 0.14
@@ -58,43 +62,88 @@ final class PanelController {
         }
     }
 
-    func hide() {
-        removeKeyMonitor()
-        panel.orderOut(nil)
-    }
-
-    /// The search field's text editor swallows Backspace (and, since the rail gained buttons, the
-    /// arrow keys) before SwiftUI's `onKeyPress` can see them, so those are handled here, ahead of
-    /// the responder chain. Only ⌘⌫ deletes, never a plain Backspace — otherwise clearing the search
-    /// query one character too far would destroy a clip. Runs only while the panel is visible.
-    private func installKeyMonitor() {
-        guard keyMonitor == nil else { return }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.panel.isVisible else { return event }
-            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            switch event.keyCode {
-            case 51 where modifiers.contains(.command):  // ⌘⌫
-                self.model?.deleteSelected()
-                return nil  // consume, so the field editor does not also act on it
-            case 125 where modifiers.isEmpty:  // ↓ — handled here too: the field editor or a rail
-                self.model?.moveSelection(by: 1)  // control can swallow arrows before SwiftUI's onKeyPress
-                return nil
-            case 126 where modifiers.isEmpty:  // ↑
-                self.model?.moveSelection(by: -1)
-                return nil
-            default:
-                return event
+    func hide(animated: Bool = true) {
+        removeMonitors()
+        guard panel.isVisible, !isHiding else { return }
+        isHiding = true
+        let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if !animated || reduce {
+            panel.orderOut(nil)
+            panel.alphaValue = 1
+            isHiding = false
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.08
+            panel.animator().alphaValue = 0
+        } completionHandler: { [weak self, weak panel] in
+            Task { @MainActor in
+                panel?.orderOut(nil)
+                panel?.alphaValue = 1
+                self?.isHiding = false
             }
         }
     }
 
-    private func removeKeyMonitor() {
-        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
-        keyMonitor = nil
+    func windowDidResignKey(_ notification: Notification) {
+        if panel.childWindows?.isEmpty ?? true {
+            hide()
+        }
     }
 
-    /// Positions on the screen containing the mouse, then either biased toward the cursor or centred,
-    /// per the user's preference, clamped inside the visible frame (docs/adr/0005).
+    func windowDidResize(_ notification: Notification) {
+        let size = panel.frame.size
+        guard size.width >= Theme.minWindowWidth, size.height >= Theme.minWindowHeight else { return }
+        prefs.panelWidth = Double(size.width)
+        prefs.panelHeight = Double(size.height)
+    }
+
+    private func installMonitors() {
+        if keyMonitor == nil {
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self, self.panel.isVisible else { return event }
+                let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                switch event.keyCode {
+                case 43 where modifiers == .command:  // ⌘,
+                    self.model?.openSettings()
+                    return nil
+                case 51 where modifiers.contains(.command):  // ⌘⌫
+                    self.model?.deleteSelected()
+                    return nil
+                case 125 where modifiers.isEmpty:  // ↓
+                    self.model?.moveSelection(by: 1)
+                    return nil
+                case 126 where modifiers.isEmpty:  // ↑
+                    self.model?.moveSelection(by: -1)
+                    return nil
+                default:
+                    return event
+                }
+            }
+        }
+        if outsideClickMonitor == nil {
+            outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+                [weak self] _ in
+                Task { @MainActor in
+                    guard let self, self.panel.isVisible else { return }
+                    let point = NSEvent.mouseLocation
+                    let insidePanel = self.panel.frame.contains(point)
+                    let insideChild = (self.panel.childWindows ?? []).contains { $0.frame.contains(point) }
+                    if !insidePanel && !insideChild {
+                        self.hide()
+                    }
+                }
+            }
+        }
+    }
+
+    private func removeMonitors() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
+        outsideClickMonitor = nil
+    }
+
     private func positionNearCursor() {
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
@@ -116,8 +165,6 @@ final class PanelController {
     }
 }
 
-/// A non-activating panel must still be allowed to become key, or the search field never gets
-/// keyboard focus. Borderless windows return false by default, so override it.
 private final class KeyablePanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }

@@ -2,12 +2,13 @@ import AppKit
 import PanoCore
 import SwiftUI
 
-/// The preferences window. Binds to `Preferences` (persisted in UserDefaults); the side-effectful
-/// changes — retention applied to the store, launch-at-login registration — are handled by the app
-/// through the injected closures so PanoUI stays free of the store and ServiceManagement.
 public struct SettingsView: View {
     @Bindable private var prefs: Preferences
     private let exclusion: ExclusionModel
+    private let supportsAutoPaste: Bool
+    private let isAccessibilityTrusted: () -> Bool
+    private let onOpenAccessibilitySettings: () -> Void
+    private let onRevealAppInFinder: () -> Void
     private let onRetentionChanged: () -> Void
     private let onLaunchAtLoginChanged: (Bool) -> Void
     private let onMenuBarIconChanged: (Bool) -> Void
@@ -16,10 +17,44 @@ public struct SettingsView: View {
     private let onMaskSecretsChanged: (Bool) -> Void
     private let onHighlightChanged: (Bool) -> Void
     private let onThemeChanged: (String) -> Void
+    private let onClearLastHour: () -> Void
+    private let onClearAllHistory: () -> Void
+    private let isCapturePaused: () -> Bool
+    private let onToggleCapturePaused: (Bool) -> Void
+
+    @State private var selectedTab: Tab = .general
+    @State private var hoveredTab: Tab?
+    @State private var capturePaused = false
+    @State private var accessibilityGranted = false
+
+    private enum Tab: String, CaseIterable, Identifiable {
+        case general, history, privacy, about
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .general: return "General"
+            case .history: return "History"
+            case .privacy: return "Privacy"
+            case .about: return "About"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .general: return "gearshape"
+            case .history: return "clock.arrow.circlepath"
+            case .privacy: return "hand.raised"
+            case .about: return "info.circle"
+            }
+        }
+    }
 
     public init(
         prefs: Preferences,
         exclusion: ExclusionModel,
+        supportsAutoPaste: Bool = false,
+        isAccessibilityTrusted: @escaping () -> Bool = { false },
+        onOpenAccessibilitySettings: @escaping () -> Void = {},
+        onRevealAppInFinder: @escaping () -> Void = {},
         onRetentionChanged: @escaping () -> Void,
         onLaunchAtLoginChanged: @escaping (Bool) -> Void,
         onMenuBarIconChanged: @escaping (Bool) -> Void,
@@ -27,10 +62,18 @@ public struct SettingsView: View {
         onOCRChanged: @escaping (Bool) -> Void,
         onMaskSecretsChanged: @escaping (Bool) -> Void,
         onHighlightChanged: @escaping (Bool) -> Void,
-        onThemeChanged: @escaping (String) -> Void
+        onThemeChanged: @escaping (String) -> Void,
+        onClearLastHour: @escaping () -> Void = {},
+        onClearAllHistory: @escaping () -> Void = {},
+        isCapturePaused: @escaping () -> Bool = { false },
+        onToggleCapturePaused: @escaping (Bool) -> Void = { _ in }
     ) {
         self.prefs = prefs
         self.exclusion = exclusion
+        self.supportsAutoPaste = supportsAutoPaste
+        self.isAccessibilityTrusted = isAccessibilityTrusted
+        self.onOpenAccessibilitySettings = onOpenAccessibilitySettings
+        self.onRevealAppInFinder = onRevealAppInFinder
         self.onRetentionChanged = onRetentionChanged
         self.onLaunchAtLoginChanged = onLaunchAtLoginChanged
         self.onMenuBarIconChanged = onMenuBarIconChanged
@@ -39,19 +82,78 @@ public struct SettingsView: View {
         self.onMaskSecretsChanged = onMaskSecretsChanged
         self.onHighlightChanged = onHighlightChanged
         self.onThemeChanged = onThemeChanged
+        self.onClearLastHour = onClearLastHour
+        self.onClearAllHistory = onClearAllHistory
+        self.isCapturePaused = isCapturePaused
+        self.onToggleCapturePaused = onToggleCapturePaused
     }
 
     public var body: some View {
-        TabView {
-            general.tabItem { Label("General", systemImage: "gearshape") }
-            history.tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            privacy.tabItem { Label("Privacy", systemImage: "hand.raised") }
-            about.tabItem { Label("About", systemImage: "info.circle") }
+        VStack(spacing: 0) {
+            tabBar
+            Divider()
+            Group {
+                switch selectedTab {
+                case .general: general
+                case .history: history
+                case .privacy: privacy
+                case .about: about
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 460, height: 400)
+        .frame(width: 480, height: supportsAutoPaste ? 540 : 470)
+        .onAppear {
+            capturePaused = isCapturePaused()
+            accessibilityGranted = isAccessibilityTrusted()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            accessibilityGranted = isAccessibilityTrusted()
+        }
     }
 
-    // MARK: General — how the panel opens and what it shows
+    private var tabBar: some View {
+        HStack(spacing: 6) {
+            ForEach(Tab.allCases) { tab in
+                let active = selectedTab == tab
+                let hovered = hoveredTab == tab
+                Button {
+                    selectedTab = tab
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.symbol)
+                            .font(.system(size: 16, weight: active ? .semibold : .regular))
+                            .foregroundStyle(active ? Theme.accent : Color.primary.opacity(0.68))
+                        Text(tab.label)
+                            .font(.system(size: 11, weight: active ? .semibold : .medium))
+                            .foregroundStyle(active ? Color.primary : Color.primary.opacity(0.68))
+                    }
+                    .frame(width: 78)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(
+                                active
+                                    ? Theme.accent.opacity(0.14)
+                                    : (hovered ? Color.primary.opacity(0.06) : .clear)
+                            )
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
+                .onHover { hoveredTab = $0 ? tab : (hoveredTab == tab ? nil : hoveredTab) }
+                .pointer()
+                .accessibilityAddTraits(active ? [.isSelected] : [])
+            }
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    // MARK: General
 
     private var general: some View {
         Form {
@@ -63,7 +165,7 @@ public struct SettingsView: View {
                         prefs.hotKeyDisplay = display
                         onHotKeyChanged()
                     }
-                    .frame(width: 120, height: 22)
+                    .frame(width: 130, height: 22)
                 }
                 Picker("Appears", selection: $prefs.panelPosition) {
                     Text("Near the cursor").tag(PanelPosition.nearCursor)
@@ -72,9 +174,53 @@ public struct SettingsView: View {
                 Toggle("Launch Pano at login", isOn: toggle(\.launchAtLogin, onLaunchAtLoginChanged))
                 Toggle("Show icon in the menu bar", isOn: toggle(\.showMenuBarIcon, onMenuBarIconChanged))
                 if !prefs.showMenuBarIcon {
-                    note("Settings stay reachable from the ⚙︎ in the panel's status bar; quit with ⌘Q from this window.")
+                    note("Settings stay reachable from ⚙︎ in the panel's status bar; quit with ⌘Q from this window.")
+                }
+                Toggle(
+                    "Pause clipboard capture",
+                    isOn: Binding(
+                        get: { capturePaused },
+                        set: {
+                            capturePaused = $0
+                            onToggleCapturePaused($0)
+                        }
+                    )
+                )
+            }
+
+            if supportsAutoPaste {
+                Section("Pasting") {
+                    Toggle("Paste automatically on Return", isOn: $prefs.autoPaste)
+                    if prefs.autoPaste {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(accessibilityGranted ? Color.green : Color.orange)
+                                .frame(width: 8, height: 8)
+                            Text(
+                                accessibilityGranted
+                                    ? "Accessibility permission granted"
+                                    : "Accessibility permission needed in System Settings"
+                            )
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                            Spacer()
+                            Link("Setup guide (macOS 15–27)", destination: Self.autoPasteGuideURL)
+                                .font(.system(size: 11.5))
+                                .pointer()
+                        }
+                        if !accessibilityGranted {
+                            HStack(spacing: 8) {
+                                Button("Open System Settings…", action: onOpenAccessibilitySettings).pointer()
+                                Button("Show Pano in Finder", action: onRevealAppInFinder).pointer()
+                            }
+                            note(
+                                "Add Pano under Privacy & Security → Accessibility (and confirm any device control prompt on macOS 27.3+) so Return sends ⌘V directly."
+                            )
+                        }
+                    }
                 }
             }
+
             Section("Content") {
                 Toggle("Highlight code", isOn: toggle(\.highlightCode, onHighlightChanged))
                 if prefs.highlightCode {
@@ -101,7 +247,7 @@ public struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    // MARK: History — one question: how long to keep things
+    // MARK: History
 
     private static let keepOptions: [(days: Int, label: String)] = [
         (1, "1 day"), (7, "1 week"), (30, "1 month"), (90, "3 months"), (365, "1 year"),
@@ -109,14 +255,13 @@ public struct SettingsView: View {
 
     private var history: some View {
         Form {
-            Section {
+            Section("Retention") {
                 Picker(
-                    "Keep items for",
+                    "Keep text & links for",
                     selection: Binding(
                         get: { prefs.retentionOtherDays },
                         set: {
                             prefs.retentionOtherDays = $0
-                            prefs.retentionImageDays = $0
                             onRetentionChanged()
                         })
                 ) {
@@ -127,22 +272,68 @@ public struct SettingsView: View {
                         Text("\(prefs.retentionOtherDays) days").tag(prefs.retentionOtherDays)
                     }
                 }
-                note("Older items are removed automatically. Pinned items and anything on a pinboard are kept forever.")
+                Picker(
+                    "Keep images for",
+                    selection: Binding(
+                        get: { prefs.retentionImageDays },
+                        set: {
+                            prefs.retentionImageDays = $0
+                            onRetentionChanged()
+                        })
+                ) {
+                    ForEach(Self.keepOptions, id: \.days) { option in
+                        Text(option.label).tag(option.days)
+                    }
+                    if !Self.keepOptions.contains(where: { $0.days == prefs.retentionImageDays }) {
+                        Text("\(prefs.retentionImageDays) days").tag(prefs.retentionImageDays)
+                    }
+                }
+                note("Older items are swept automatically. Pinned items and anything on a pinboard are kept forever.")
+            }
+
+            Section("Cleanup") {
+                HStack(spacing: 10) {
+                    Button("Clear Last Hour", action: onClearLastHour).pointer()
+                    Button("Clear All Unpinned…", role: .destructive, action: onClearAllHistory).pointer()
+                }
+                Button("Reset inline tips & copy hint") {
+                    prefs.copyHintDismissed = false
+                    prefs.ocrTipDismissed = false
+                    prefs.transformTipDismissed = false
+                }
+                .pointer()
             }
         }
         .formStyle(.grouped)
     }
 
-    // MARK: Privacy — what never gets recorded
+    // MARK: Privacy
+
+    private static let secretHourOptions = [1, 4, 12, 24]
 
     private var privacy: some View {
         Form {
             Section("Secrets") {
                 Toggle("Hide things that look like secrets", isOn: toggle(\.maskSecrets, onMaskSecretsChanged))
+                Picker(
+                    "Delete detected secrets after",
+                    selection: Binding(
+                        get: { prefs.retentionSecretHours },
+                        set: {
+                            prefs.retentionSecretHours = $0
+                            onRetentionChanged()
+                        })
+                ) {
+                    ForEach(Self.secretHourOptions, id: \.self) { hours in
+                        Text("\(hours) hour\(hours == 1 ? "" : "s")").tag(hours)
+                    }
+                    if !Self.secretHourOptions.contains(prefs.retentionSecretHours) {
+                        Text("\(prefs.retentionSecretHours) hours").tag(prefs.retentionSecretHours)
+                    }
+                }
                 note(
-                    "API keys, tokens, card and IBAN numbers are shown as •••• and removed after "
-                        + "\(prefs.retentionSecretHours) hour\(prefs.retentionSecretHours == 1 ? "" : "s"). "
-                        + "Detection is rule-based and runs on your Mac.")
+                    "API keys, tokens, card and IBAN numbers are masked in the list. Rule-based and strictly on-device."
+                )
             }
             Section("Excluded apps") {
                 if exclusion.apps.isEmpty {
@@ -176,27 +367,34 @@ public struct SettingsView: View {
             Section {
                 HStack(spacing: 12) {
                     Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Pano").font(.title2.bold())
-                        Text("Clipboard manager for macOS").foregroundStyle(.secondary)
+                        Text("Open-source clipboard manager for macOS").foregroundStyle(.secondary)
                     }
                 }
                 LabeledContent("Version", value: Preferences.marketingVersion)
+                LabeledContent(
+                    "Distribution", value: supportsAutoPaste ? "Direct (Auto-Paste enabled)" : "Mac App Store")
                 LabeledContent("Developer", value: "Can Çetin")
-                // Licence and Source are hidden while the repository is private: linking people to
-                // a 404 is worse than saying nothing. Put both back when it is opened.
+                LabeledContent("Licence", value: "MIT (Open Source)")
+                LabeledContent("Source") {
+                    Link("github.com/theshiver/pano-app", destination: Self.githubURL).pointer()
+                }
                 LabeledContent("Website") {
                     Link("pano-app.com", destination: Self.websiteURL).pointer()
                 }
             }
             Section {
-                note("Everything stays on this Mac. No account, no sync, no analytics, no network access at all.")
+                note("Everything stays on this Mac. No account, no sync, no telemetry, no network access at all.")
             }
         }
         .formStyle(.grouped)
     }
 
     private static let websiteURL = URL(string: "https://pano-app.com") ?? URL(fileURLWithPath: "/")
+    private static let githubURL = URL(string: "https://github.com/theshiver/pano-app") ?? URL(fileURLWithPath: "/")
+    private static let autoPasteGuideURL =
+        URL(string: "https://pano-app.com/auto-paste-setup/") ?? URL(fileURLWithPath: "/")
 
     // MARK: Helpers
 
@@ -204,7 +402,6 @@ public struct SettingsView: View {
         Text(text).font(.system(size: 11)).foregroundStyle(.secondary)
     }
 
-    /// A toggle bound to a preference that also notifies the app of the change.
     private func toggle(_ keyPath: ReferenceWritableKeyPath<Preferences, Bool>, _ changed: @escaping (Bool) -> Void)
         -> Binding<Bool>
     {

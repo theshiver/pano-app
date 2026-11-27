@@ -4,12 +4,14 @@ import PanoUI
 import ServiceManagement
 import SwiftUI
 
-/// Owns the preferences window and applies the settings that have side effects: retention to the
-/// store and launch-at-login through ServiceManagement. Plain values persist in `Preferences`.
 @MainActor
 final class SettingsController {
     private let prefs: Preferences
     private let store: Store
+    private let supportsAutoPaste: Bool
+    private let isAccessibilityTrusted: () -> Bool
+    private let onOpenAccessibilitySettings: () -> Void
+    private let onRevealAppInFinder: () -> Void
     private let onHotKeyChanged: () -> Void
     private let onExclusionsChanged: () -> Void
     private let onOCRChanged: (Bool) -> Void
@@ -17,20 +19,40 @@ final class SettingsController {
     private let onMaskSecretsChanged: (Bool) -> Void
     private let onHighlightChanged: (Bool) -> Void
     private let onThemeChanged: (String) -> Void
+    private let onRetentionChanged: () -> Void
+    private let onClearLastHour: () -> Void
+    private let onClearAllHistory: () -> Void
+    private let isCapturePaused: () -> Bool
+    private let onToggleCapturePaused: (Bool) -> Void
     private var window: NSWindow?
     private var exclusion: ExclusionModel?
 
     init(
-        prefs: Preferences, store: Store,
-        onHotKeyChanged: @escaping () -> Void, onExclusionsChanged: @escaping () -> Void,
+        prefs: Preferences,
+        store: Store,
+        supportsAutoPaste: Bool,
+        isAccessibilityTrusted: @escaping () -> Bool,
+        onOpenAccessibilitySettings: @escaping () -> Void,
+        onRevealAppInFinder: @escaping () -> Void,
+        onHotKeyChanged: @escaping () -> Void,
+        onExclusionsChanged: @escaping () -> Void,
         onOCRChanged: @escaping (Bool) -> Void,
         onMenuBarIconChanged: @escaping (Bool) -> Void,
         onMaskSecretsChanged: @escaping (Bool) -> Void,
         onHighlightChanged: @escaping (Bool) -> Void,
-        onThemeChanged: @escaping (String) -> Void
+        onThemeChanged: @escaping (String) -> Void,
+        onRetentionChanged: @escaping () -> Void,
+        onClearLastHour: @escaping () -> Void,
+        onClearAllHistory: @escaping () -> Void,
+        isCapturePaused: @escaping () -> Bool,
+        onToggleCapturePaused: @escaping (Bool) -> Void
     ) {
         self.prefs = prefs
         self.store = store
+        self.supportsAutoPaste = supportsAutoPaste
+        self.isAccessibilityTrusted = isAccessibilityTrusted
+        self.onOpenAccessibilitySettings = onOpenAccessibilitySettings
+        self.onRevealAppInFinder = onRevealAppInFinder
         self.onHotKeyChanged = onHotKeyChanged
         self.onExclusionsChanged = onExclusionsChanged
         self.onOCRChanged = onOCRChanged
@@ -38,20 +60,21 @@ final class SettingsController {
         self.onMaskSecretsChanged = onMaskSecretsChanged
         self.onHighlightChanged = onHighlightChanged
         self.onThemeChanged = onThemeChanged
+        self.onRetentionChanged = onRetentionChanged
+        self.onClearLastHour = onClearLastHour
+        self.onClearAllHistory = onClearAllHistory
+        self.isCapturePaused = isCapturePaused
+        self.onToggleCapturePaused = onToggleCapturePaused
     }
 
     func show() {
-        // Reuse the window across opens. isReleasedWhenClosed must be false or closing it with the
-        // red button deallocates it, leaving a dangling reference and no window on the next open.
         if let window {
             refreshExclusions()
-            window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
-            NSApp.activate(ignoringOtherApps: true)
+            activateWindow(window)
             return
         }
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: supportsAutoPaste ? 540 : 470),
             styleMask: [.titled, .closable], backing: .buffered, defer: false
         )
         window.isReleasedWhenClosed = false
@@ -68,8 +91,16 @@ final class SettingsController {
             rootView: SettingsView(
                 prefs: prefs,
                 exclusion: exclusion,
-                onRetentionChanged: { [store, prefs] in
-                    Task { await store.setRetention(prefs.retentionRules) }
+                supportsAutoPaste: supportsAutoPaste,
+                isAccessibilityTrusted: isAccessibilityTrusted,
+                onOpenAccessibilitySettings: onOpenAccessibilitySettings,
+                onRevealAppInFinder: onRevealAppInFinder,
+                onRetentionChanged: { [store, prefs, onRetentionChanged] in
+                    Task {
+                        await store.setRetention(prefs.retentionRules)
+                        _ = try? await store.sweepExpired()
+                        await MainActor.run { onRetentionChanged() }
+                    }
                 },
                 onLaunchAtLoginChanged: { Self.setLaunchAtLogin($0) },
                 onMenuBarIconChanged: onMenuBarIconChanged,
@@ -77,13 +108,25 @@ final class SettingsController {
                 onOCRChanged: onOCRChanged,
                 onMaskSecretsChanged: onMaskSecretsChanged,
                 onHighlightChanged: onHighlightChanged,
-                onThemeChanged: onThemeChanged
+                onThemeChanged: onThemeChanged,
+                onClearLastHour: onClearLastHour,
+                onClearAllHistory: onClearAllHistory,
+                isCapturePaused: isCapturePaused,
+                onToggleCapturePaused: onToggleCapturePaused
             )
         )
-        window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
-        NSApp.activate(ignoringOtherApps: true)
         self.window = window
+        activateWindow(window)
+    }
+
+    private func activateWindow(_ window: NSWindow) {
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
+        DispatchQueue.main.async {
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     private func refreshExclusions() {
@@ -93,8 +136,6 @@ final class SettingsController {
         }
     }
 
-    /// Lets the user pick an app to exclude. An NSOpenPanel restricted to applications gives us
-    /// sandbox-legal read access to the bundle, from which we read its identifier and name.
     private func pickAppToExclude() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.application]

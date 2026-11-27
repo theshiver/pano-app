@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 
@@ -140,4 +141,42 @@ private func text(_ s: String) -> ClipCapture {
     #expect(PanelModel.completion(for: "type:image", apps: apps) == nil)
     #expect(PanelModel.completion(for: "hello ", apps: apps) == nil)
     #expect(PanelModel.completion(for: "", apps: apps) == nil)
+}
+
+@MainActor
+@Test func richPreviewStripsHtmlBackgroundAndNormalizesExtremeFontSizes() {
+    let html = "<p style='background-color:#ff0;color:#000;font-size:48px'>Big</p><p style='font-size:8px'>Tiny</p>"
+    let attr = RichPreview.attributed(html: html)
+    #expect(attr != nil)
+    if let attr {
+        let ns = NSAttributedString(attr)
+        let full = NSRange(location: 0, length: ns.length)
+        var foundBackground = false
+        var minSize = CGFloat.greatestFiniteMagnitude
+        var maxSize: CGFloat = 0
+        ns.enumerateAttributes(in: full) { attrs, _, _ in
+            if attrs[.backgroundColor] != nil { foundBackground = true }
+            if let font = attrs[.font] as? NSFont {
+                minSize = min(minSize, font.pointSize)
+                maxSize = max(maxSize, font.pointSize)
+            }
+        }
+        #expect(!foundBackground)
+        #expect(minSize >= 12.0)
+        #expect(maxSize <= 17.6)
+    }
+}
+
+@MainActor
+@Test func hotKeyRecorderFormatsSpecialKeysCleanly() {
+    #expect(
+        HotKeyRecorderField.RecorderView.displayString(
+            keyCode: 49, modifiers: [.command, .shift], charactersIgnoringModifiers: " "
+        ) == "⇧⌘Space"
+    )
+    #expect(
+        HotKeyRecorderField.RecorderView.displayString(
+            keyCode: 36, modifiers: [.command], charactersIgnoringModifiers: "\r"
+        ) == "⌘↩"
+    )
 }

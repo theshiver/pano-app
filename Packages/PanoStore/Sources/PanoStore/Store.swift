@@ -18,6 +18,9 @@ public actor Store {
         var config = Configuration()
         config.foreignKeysEnabled = true
         self.dbQueue = try DatabaseQueue(path: folder.appendingPathComponent("pano.sqlite").path, configuration: config)
+        try dbQueue.writeWithoutTransaction { db in
+            try db.execute(sql: "PRAGMA journal_mode = WAL")
+        }
         self.retention = retention
         try Migrations.migrator().migrate(dbQueue)
     }
@@ -143,7 +146,7 @@ public actor Store {
                     WHERE clip.id IN (
                         SELECT rowid FROM clip_fts WHERE clip_fts MATCH ? ORDER BY rowid DESC LIMIT ?
                     )
-                    ORDER BY clip.id DESC
+                    ORDER BY clip.is_pinned DESC, clip.last_seen_at DESC
                     """,
                 arguments: [pattern, limit]
             )
@@ -286,6 +289,32 @@ public actor Store {
         let (deleted, blobs) = try dbQueue.write { db -> (Int, [String]) in
             let ids = try Int64.fetchAll(
                 db, sql: "SELECT id FROM clip WHERE is_pinned = 0 AND id NOT IN (SELECT clip_id FROM pinboard_clip)")
+            guard !ids.isEmpty else { return (0, []) }
+            let list = ids.map { "\($0)" }.joined(separator: ",")
+            let paths = try String.fetchAll(
+                db,
+                sql: "SELECT blob_path FROM clip_content WHERE clip_id IN (\(list)) AND blob_path IS NOT NULL"
+            )
+            try db.execute(sql: "DELETE FROM clip WHERE id IN (\(list))")
+            return (ids.count, paths)
+        }
+        for name in blobs {
+            try? FileManager.default.removeItem(at: blobsURL.appendingPathComponent(name))
+        }
+        return deleted
+    }
+
+    @discardableResult
+    public func clearHistory(since cutoff: Date) throws -> Int {
+        let (deleted, blobs) = try dbQueue.write { db -> (Int, [String]) in
+            let ids = try Int64.fetchAll(
+                db,
+                sql: """
+                    SELECT id FROM clip WHERE last_seen_at >= ? AND is_pinned = 0
+                    AND id NOT IN (SELECT clip_id FROM pinboard_clip)
+                    """,
+                arguments: [cutoff]
+            )
             guard !ids.isEmpty else { return (0, []) }
             let list = ids.map { "\($0)" }.joined(separator: ",")
             let paths = try String.fetchAll(

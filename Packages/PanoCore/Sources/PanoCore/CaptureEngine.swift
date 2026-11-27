@@ -111,11 +111,17 @@ public actor CaptureEngine {
     /// happens in CaptureBuilder.
     private static func read(_ pb: NSPasteboard) -> CaptureBuilder.Input? {
         guard let items = pb.pasteboardItems else { return nil }
+        let allTypes = Set(items.flatMap { $0.types.map(\.rawValue) })
+        if !allTypes.isDisjoint(with: PasteboardUTIs.markers) { return nil }
+        let hasPNG = allTypes.contains(PasteboardUTIs.png)
+
         var utis: [String] = []
         var data: [String: Data] = [:]
         for item in items {
             for type in item.types {
                 let uti = type.rawValue
+                guard PasteboardUTIs.whitelist.contains(uti) else { continue }
+                if uti == PasteboardUTIs.tiff && hasPNG { continue }
                 if data[uti] == nil, let bytes = item.data(forType: type) {
                     utis.append(uti)
                     data[uti] = bytes
@@ -172,7 +178,9 @@ public actor CaptureEngine {
         case "gif": return "com.compuserve.gif"
         case "heic", "heif": return "public.heic"
         case "tiff", "tif": return "public.tiff"
-        default: return nil  // bmp/webp: skip until they earn a UTI mapping
+        case "webp": return "public.webp"
+        case "bmp": return "com.microsoft.bmp"
+        default: return nil
         }
     }
 }

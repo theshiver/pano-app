@@ -95,6 +95,12 @@ enum Migrations {
             )
         }
 
+        migrator.registerMigration("v1.1-indexes") { db in
+            try db.execute(
+                sql: "CREATE INDEX IF NOT EXISTS idx_clip_pinned_last_seen ON clip(is_pinned DESC, last_seen_at DESC)"
+            )
+        }
+
         return migrator
     }
 }

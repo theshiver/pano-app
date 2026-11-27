@@ -8,7 +8,7 @@ pinning, no per-app exclusions, and rich text stripped out. Every good
 third-party alternative is a subscription. Pano is the other option: the whole
 app, free, with the source in this repo.
 
-**Status: pre-release.** Nothing is shipping yet. See [the roadmap](docs/06-roadmap.md).
+**Now available:** Free and open source (MIT). Install via [Direct DMG / Homebrew](https://github.com/theshiver/pano-app/releases/latest) (includes optional Auto-Paste) or the [Mac App Store](https://apps.apple.com/app/id6812981549).
 
 ## What it does
 
@@ -29,40 +29,41 @@ app, free, with the source in this repo.
 
 ## What it deliberately does not do
 
-No sync. No cloud. No account. No telemetry. **The app ships without the network
-entitlement**, so this is verifiable rather than promised. No subscription, no
-paid tier, no feature gates.
+No sync. No cloud. No account. No telemetry. **Neither build ships with a network entitlement**, so this is verifiable rather than promised. No subscription, no paid tier, no feature gates.
 
 If you need your clipboard on your phone, Pano is not the tool.
 
 ## Privacy
 
-Everything lives in one SQLite file in your Application Support folder. Anything
-a password manager marks as concealed never enters the database. API keys, JWTs,
-card numbers and IBANs are detected, masked in the list, and expire on the short
-retention rule.
+Everything lives in one SQLite file in your Application Support folder. Anything a password manager marks as concealed never enters the database. API keys, JWTs, card numbers and IBANs are detected, masked in the list, and expire on the short retention rule.
 
-Pano needs two permissions, both asked for by macOS and both revocable:
+Permissions requested by macOS (all revocable):
 
 - **Paste from Other Apps** — to read the clipboard at all
-- **Accessibility** — to press ⌘V for you in the app you were in.
-  Decline it and Pano still works; you press ⌘V yourself.
+- **Accessibility (Direct DMG / Homebrew build only, optional)** — to press ⌘V for you in the app you came from when Auto-Paste is enabled. Decline it and Pano still works; you press ⌘V yourself. See the [Auto-Paste setup guide](https://pano-app.com/auto-paste-setup/). The Mac App Store build is strictly sandboxed and contains zero Accessibility or synthetic-event APIs.
 
 ## Install
 
-Not released yet. It will be available on the Mac App Store, free. That is the
-only official build; GitHub releases carry no binaries. Follow
-[pano-app.com](https://pano-app.com) for the release.
+Choose the free build that fits your workflow:
+
+- **Direct DMG / Homebrew (includes optional Auto-Paste):** Download `Pano-1.1.dmg` from [GitHub Releases](https://github.com/theshiver/pano-app/releases/latest), or install via Homebrew:
+  ```bash
+  brew install --cask theshiver/tap/pano
+  ```
+  See the [Auto-Paste & Accessibility setup guide](https://pano-app.com/auto-paste-setup/) for macOS permission steps.
+- **Mac App Store (strictly sandboxed, copy-only):** Install from the [Mac App Store](https://apps.apple.com/app/id6812981549).
 
 ## Build
 
 Requires Xcode 16 or later and macOS 15.4 or later.
 
-```
-git clone https://github.com/<owner>/pano-app.git
+```bash
+git clone https://github.com/theshiver/pano-app.git
 cd pano-app
 open Pano.xcodeproj
 ```
+
+Select the `PanoDirect` scheme for the non-sandboxed build with Auto-Paste, or `Pano` for the strictly sandboxed Mac App Store build.
 
 ## Contributing
 

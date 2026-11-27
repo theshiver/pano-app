@@ -258,3 +258,22 @@ private func text(_ s: String, bundle: String? = nil) -> ClipCapture {
     #expect(try await store.pinboards().isEmpty)
     #expect(try await store.count() == 1)  // the clip survives the board
 }
+
+@Test func clearHistorySinceCutoffRemovesOnlyRecentUnpinned() async throws {
+    let (store, folder) = try tempStore()
+    defer { try? FileManager.default.removeItem(at: folder) }
+
+    let now = Date()
+    let twoHoursAgo = now.addingTimeInterval(-7200)
+    let tenMinsAgo = now.addingTimeInterval(-600)
+
+    try await store.insert(text("old"), now: twoHoursAgo)
+    try await store.insert(text("recent"), now: tenMinsAgo)
+    let pinnedRecent = try await store.insert(text("pinned recent"), now: tenMinsAgo)
+    try await store.setPinned(true, id: pinnedRecent)
+
+    let deleted = try await store.clearHistory(since: now.addingTimeInterval(-3600))
+    #expect(deleted == 1)
+    let contents = Set(try await store.recent().compactMap(\.content))
+    #expect(contents == ["old", "pinned recent"])
+}

@@ -36,7 +36,7 @@ actor CodeText {
         guard let highlightr else { return nil }
         if appliedTheme != theme {
             highlightr.setTheme(to: theme)
-            highlightr.theme.setCodeFont(.monospacedSystemFont(ofSize: 10.5, weight: .regular))
+            highlightr.theme.setCodeFont(.monospacedSystemFont(ofSize: 11.5, weight: .regular))
             appliedTheme = theme
         }
         guard let attributed = highlightr.highlight(code, as: language.map(Self.hljsName), fastRender: true) else {

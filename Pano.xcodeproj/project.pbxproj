@@ -8,10 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		23077BA48DBF6C69EAFAD2AA /* PanoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 977794DDCB01F542A74826C4 /* PanoCore */; };
+		23B282D55B2A4C79C5D5282C /* ReviewPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = E539C75FB2DAFB03915621E8 /* ReviewPrompt.swift */; };
 		24FA4D039A606A0170D6C3B5 /* DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 488F53709542ADC45AED374A /* DemoSeed.swift */; };
 		430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168A8E4B981B98CCA2740F4B /* PanoApp.swift */; };
+		4FC63B10B3333A660384FDEF /* StarterSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0F1FCBD5089988341C7079 /* StarterSeed.swift */; };
 		64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */; };
 		79300C362BFA1D525B0CDE30 /* OnboardingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */; };
+		A6FB8047E604EDBCAC3E859E /* AutoPasteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBF72A1FDF51989AF1F90FB /* AutoPasteService.swift */; };
 		AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8992C5DECD288DF58410A7C3 /* PanoUI */; };
 		BDAFC0B4C1A158B9AEBEC12C /* PasteHintController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */; };
 		C1847B4C8120C84E96B4AF1F /* PanoStore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9568E340008D408C1E2903 /* PanoStore */; };
@@ -25,9 +28,11 @@
 /* Begin PBXFileReference section */
 		157C9C9E05396F29C5B4E202 /* PanoCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoCore; path = Packages/PanoCore; sourceTree = SOURCE_ROOT; };
 		168A8E4B981B98CCA2740F4B /* PanoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanoApp.swift; sourceTree = "<group>"; };
+		1C0F1FCBD5089988341C7079 /* StarterSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarterSeed.swift; sourceTree = "<group>"; };
 		24816FD7623B37E865E76662 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKey.swift; sourceTree = "<group>"; };
 		2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
+		2EBF72A1FDF51989AF1F90FB /* AutoPasteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPasteService.swift; sourceTree = "<group>"; };
 		3CEC72F0359DFAF3B509770D /* PanoStore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoStore; path = Packages/PanoStore; sourceTree = SOURCE_ROOT; };
 		488F53709542ADC45AED374A /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
 		4FB6A4D5645A7B9973F456BF /* PanoTransforms */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoTransforms; path = Packages/PanoTransforms; sourceTree = SOURCE_ROOT; };
@@ -37,6 +42,7 @@
 		AF22A45DD1021A67EE7E2992 /* Pano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pano.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B94400302E890E027583C578 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHintController.swift; sourceTree = "<group>"; };
+		E539C75FB2DAFB03915621E8 /* ReviewPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewPrompt.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,13 +76,16 @@
 			children = (
 				24816FD7623B37E865E76662 /* AppDelegate.swift */,
 				B94400302E890E027583C578 /* Assets.xcassets */,
+				2EBF72A1FDF51989AF1F90FB /* AutoPasteService.swift */,
 				488F53709542ADC45AED374A /* DemoSeed.swift */,
 				270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */,
 				707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */,
 				2AA7E5789C48C705E6B1FDA2 /* PanelController.swift */,
 				168A8E4B981B98CCA2740F4B /* PanoApp.swift */,
 				C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */,
+				E539C75FB2DAFB03915621E8 /* ReviewPrompt.swift */,
 				6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */,
+				1C0F1FCBD5089988341C7079 /* StarterSeed.swift */,
 			);
 			path = Pano;
 			sourceTree = "<group>";
@@ -181,13 +190,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				F0B4ABE62C96658817473B01 /* AppDelegate.swift in Sources */,
+				A6FB8047E604EDBCAC3E859E /* AutoPasteService.swift in Sources */,
 				24FA4D039A606A0170D6C3B5 /* DemoSeed.swift in Sources */,
 				64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */,
 				79300C362BFA1D525B0CDE30 /* OnboardingController.swift in Sources */,
 				E5E28B945B3C06AC280BEE97 /* PanelController.swift in Sources */,
 				430F6D67F56A280BB5C29D37 /* PanoApp.swift in Sources */,
 				BDAFC0B4C1A158B9AEBEC12C /* PasteHintController.swift in Sources */,
+				23B282D55B2A4C79C5D5282C /* ReviewPrompt.swift in Sources */,
 				DD5C20F4F455D9EDD71BBCFC /* SettingsController.swift in Sources */,
+				4FC63B10B3333A660384FDEF /* StarterSeed.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,19 +272,101 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 			};
 			name = Debug;
+		};
+		5FFA94CABF06EA454EC2F85F /* ReleaseDirect */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = ReleaseDirect;
+		};
+		70B372003BF83235BFCA5435 /* DebugDirect */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Pano/PanoDirect.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = S2RH54MMT3;
+				INFOPLIST_FILE = Pano/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
+				PRODUCT_NAME = Pano;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG DIRECT_DISTRIBUTION";
+			};
+			name = DebugDirect;
 		};
 		8DECDEE9F96B6A693D7A53D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -340,6 +434,94 @@
 			};
 			name = Debug;
 		};
+		AF7440A5B955E8EE4EF572F1 /* ReleaseDirect */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Pano/PanoDirect.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = S2RH54MMT3;
+				INFOPLIST_FILE = Pano/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
+				PRODUCT_NAME = Pano;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DIRECT_DISTRIBUTION;
+			};
+			name = ReleaseDirect;
+		};
+		FDA4690CF54325E2337853C3 /* DebugDirect */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = DebugDirect;
+		};
 		FFA4128280FC8D007E085EAE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -347,14 +529,14 @@
 				CODE_SIGN_ENTITLEMENTS = Pano/Pano.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = S2RH54MMT3;
 				INFOPLIST_FILE = Pano/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
@@ -368,7 +550,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5A4EB56CB0427C6716EFBD29 /* Debug */,
+				70B372003BF83235BFCA5435 /* DebugDirect */,
 				FFA4128280FC8D007E085EAE /* Release */,
+				AF7440A5B955E8EE4EF572F1 /* ReleaseDirect */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -377,7 +561,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8DECDEE9F96B6A693D7A53D8 /* Debug */,
+				FDA4690CF54325E2337853C3 /* DebugDirect */,
 				2703AF2C0E2FB3BD22F74945 /* Release */,
+				5FFA94CABF06EA454EC2F85F /* ReleaseDirect */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

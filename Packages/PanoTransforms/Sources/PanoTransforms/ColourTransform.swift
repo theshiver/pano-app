@@ -8,6 +8,10 @@ public struct ColourTransform: Transform {
     public let title = "Colour"
     public init() {}
 
+    public static func parseHex(_ raw: String) -> String? {
+        Colour(parsing: raw)?.hex
+    }
+
     public func applies(to text: String) -> Bool {
         Colour(parsing: text) != nil
     }

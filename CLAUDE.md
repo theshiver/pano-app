@@ -6,9 +6,8 @@ Read this file completely before doing anything in this repo.
 
 A free, open-source clipboard manager for macOS. **Local only**: no sync, no cloud,
 no account, no telemetry, no network code at all. Distributed free on the Mac App
-Store only; no DMG, no Homebrew cask, no binaries on GitHub. MIT licensed.
-The repo stays private until after the App Store launch, so nothing user-facing
-(App Store text, site, review notes) may claim "open source" or link the repo yet.
+Store (sandboxed, copy-only) and via a notarized DMG / Homebrew cask (`PanoDirect`
+target, with opt-in `CGEvent` auto-paste). MIT licensed.
 
 One-line promise: *as fast as Maccy, as good-looking as Paste, completely free, and
 the data never leaves the Mac.*
@@ -91,12 +90,13 @@ wrong wastes days:
    somewhere else when they press ⌘V. Do not build the main panel as a plain
    SwiftUI `Window` or `WindowGroup`.
 
-2. **No auto-paste.** ⏎ writes the clip to the pasteboard and the user presses
-   ⌘V. No `CGEvent` posting, no Accessibility API (`AXIsProcessTrusted` or any
-   other), no Apple Events, no `temporary-exception` entitlements. App Review
-   rejected four builds under 2.4.5 for auto-paste; see `docs/adr/0008`. The
-   entitlements file contains exactly `app-sandbox` and
-   `files.user-selected.read-only` — nothing else.
+2. **No auto-paste in the Mac App Store target (`Pano`).** ⏎ writes the clip to the
+   pasteboard and the user presses ⌘V. No `CGEvent` posting, no Accessibility API
+   (`AXIsProcessTrusted` or any other), no Apple Events, no `temporary-exception`
+   entitlements in `Pano` or any local Swift package. App Review rejected four builds
+   under 2.4.5 for auto-paste; see `docs/adr/0008`. `Pano/Pano.entitlements` contains
+   exactly `app-sandbox` and `files.user-selected.read-only`. Optional `CGEvent`
+   auto-paste lives strictly behind `#if DIRECT_DISTRIBUTION` in `PanoDirect`.
 
 3. **⏎ must visibly do something.** The preview footer and the hint card tell
    the user the clip is on the clipboard and to press ⌘V.

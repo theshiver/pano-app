@@ -1,16 +1,17 @@
+import AppKit
 import PanoStore
 import PanoTransforms
 import SwiftUI
 
-/// One result row: type dot, single-line content, and a metadata line (source · age · copies).
-/// docs/05-design.md row anatomy. Thumbnails, colour swatches and code language come with the
-/// kinds that need them in later weeks; this renders the common text/url/file case.
 struct ClipRow: View {
     let item: ClipListItem
+    let model: PanelModel
     let isSelected: Bool
     var quickRank: Int? = nil
     var showLanguage = true
     @Environment(\.colorScheme) private var scheme
+    @State private var hovered = false
+    @State private var thumbnail: NSImage?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -18,7 +19,7 @@ struct ClipRow: View {
                 .frame(width: Theme.dotSize, height: Theme.dotSize)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(item.isMasked ? "••••••••" : firstLine)
                     .font(Theme.rowContent)
                     .lineLimit(1)
@@ -31,15 +32,15 @@ struct ClipRow: View {
             Spacer(minLength: 0)
             if item.isPinned {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: 9))
-                    .foregroundStyle(Theme.accent)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.brandAccent)
                     .accessibilityLabel("pinned")
             }
             if let quickRank {
                 Text("⌘\(quickRank)")
                     .font(Theme.rowMeta)
                     .foregroundStyle(Theme.accent)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(RoundedRectangle(cornerRadius: 4).fill(Theme.accent.opacity(0.12)))
                     .accessibilityHidden(true)
@@ -49,15 +50,32 @@ struct ClipRow: View {
         .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: Theme.rowCorner)
-                .fill(isSelected ? Theme.accent.opacity(scheme == .dark ? 0.28 : 0.14) : .clear)
+                .fill(rowFill)
         )
         .contentShape(Rectangle())
+        .onHover { hovered = $0 }
+        .task(id: item.id) {
+            guard item.kind == .image else { return }
+            if let cached = PreviewCache.shared.thumbnail(for: item.id) {
+                thumbnail = cached
+                return
+            }
+            thumbnail = await model.thumbnail(for: item.id)
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }
 
-    /// One line is all the row shows, so only that much is handed to layout (a 3000-line clip
-    /// would otherwise be measured in full on every render).
+    private var rowFill: Color {
+        if isSelected {
+            return Theme.accent.opacity(scheme == .dark ? 0.28 : 0.14)
+        }
+        if hovered {
+            return Color.primary.opacity(scheme == .dark ? 0.06 : 0.04)
+        }
+        return .clear
+    }
+
     private var firstLine: String {
         guard let content = item.content, !content.isEmpty else { return placeholder }
         return String(content.prefix { $0 != "\n" }.prefix(200))
@@ -74,9 +92,7 @@ struct ClipRow: View {
     private var metadata: String {
         var parts: [String] = []
         if item.isMasked { parts.append("not stored") }
-        if showLanguage, item.kind == .code, let content = item.content,
-            let language = CodeHighlighter.detectLanguage(String(content.prefix(4000)))
-        {
+        if showLanguage, item.kind == .code, let language = PreviewCache.shared.language(for: item) {
             parts.append(language.rawValue)
         }
         if let source = item.sourceName ?? item.sourceBundleId { parts.append(source) }
@@ -89,21 +105,25 @@ struct ClipRow: View {
         "\(item.kind.rawValue), \(item.isMasked ? "hidden" : (item.content ?? placeholder)), \(metadata)"
     }
 
-    /// A symbol per kind on a tinted tile, so the type reads at a glance; a colour clip shows the
-    /// colour itself.
     @ViewBuilder private var kindBadge: some View {
-        if item.kind == .colour, let hex = item.content.flatMap({ try? ColourTransform().apply($0).text }),
-            let swatch = Color(hex: hex)
-        {
-            RoundedRectangle(cornerRadius: 5).fill(swatch)
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(.separator))
+        if item.kind == .image, let thumb = PreviewCache.shared.thumbnail(for: item.id) ?? thumbnail {
+            Image(nsImage: thumb)
+                .resizable()
+                .scaledToFill()
+                .frame(width: Theme.dotSize, height: Theme.dotSize)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.separator, lineWidth: 0.5))
+        } else if item.kind == .colour, let swatch = PreviewCache.shared.swatchColor(for: item) {
+            RoundedRectangle(cornerRadius: 5)
+                .fill(swatch)
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.separator, lineWidth: 0.5))
         } else {
             let (symbol, tint) = kindStyle
             Image(systemName: symbol)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: Theme.dotSize, height: Theme.dotSize)
-                .background(RoundedRectangle(cornerRadius: 5).fill(tint.opacity(0.15)))
+                .background(RoundedRectangle(cornerRadius: 5).fill(tint.opacity(0.14)))
         }
     }
 

@@ -2,9 +2,6 @@ import AppKit
 import PanoStore
 import SwiftUI
 
-/// The panel content: the source-app rail, the search field over the result list, and the live
-/// preview, with the status bar underneath. Keyboard-first (docs/05-design.md): the search field
-/// owns first responder and drives selection with the arrow keys; ⏎ pastes, esc closes.
 public struct PanelView: View {
     @State private var model: PanelModel
     @FocusState private var searchFocused: Bool
@@ -20,22 +17,22 @@ public struct PanelView: View {
             HStack(spacing: 0) {
                 rail
                 Divider()
-                VStack(spacing: 0) {
-                    searchRow
+                HStack(spacing: 0) {
+                    VStack(spacing: 0) {
+                        searchRow
+                        Divider()
+                        if showQuickFilters {
+                            quickFilterStrip
+                            Divider()
+                        }
+                        list
+                    }
+                    .frame(width: Theme.listWidth)
                     Divider()
-                    list
+                    PreviewPane(model: model)
+                        .frame(maxWidth: .infinity)
                 }
-                .frame(width: Theme.listWidth)
-                Divider()
-                PreviewPane(model: model)
-                    .frame(maxWidth: .infinity)
-            }
-            // A half-strength window-colour wash under the list and preview only: the blur still
-            // shows through, but text no longer sits directly on whatever saturated window is behind.
-            .background(alignment: .trailing) {
-                Color(nsColor: .windowBackgroundColor)
-                    .opacity(scheme == .dark ? 0.55 : 0.5)
-                    .frame(width: Theme.windowWidth - Theme.railWidth)
+                .background(Color(nsColor: .windowBackgroundColor).opacity(scheme == .dark ? 0.44 : 0.48))
             }
             Divider()
             StatusBar(
@@ -44,9 +41,13 @@ public struct PanelView: View {
                     || !model.query.trimmingCharacters(in: .whitespaces).isEmpty,
                 openSettings: model.openSettings)
         }
-        .frame(width: Theme.windowWidth, height: Theme.windowHeight)
+        .frame(minWidth: Theme.minWindowWidth, minHeight: Theme.minWindowHeight)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                .strokeBorder(.primary.opacity(scheme == .dark ? 0.14 : 0.10), lineWidth: 0.5)
+        )
         .onModifierKeysChanged(mask: .command) { _, new in
             model.commandHeld = new.contains(.command)
         }
@@ -57,12 +58,49 @@ public struct PanelView: View {
         .onChange(of: model.focusRequests) { searchFocused = true }
     }
 
+    private var showQuickFilters: Bool {
+        model.query.isEmpty && model.selectedAppId == nil && model.selectedPinboardId == nil
+    }
+
+    private var quickFilterStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                quickPill("Code", token: "type:code ")
+                quickPill("Images · OCR", token: "type:image ")
+                quickPill("Colours", token: "type:colour ")
+                quickPill("Pinned", token: "pinned: ")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+        }
+    }
+
+    private func quickPill(_ label: String, token: String) -> some View {
+        Button {
+            model.setQuickFilter(token)
+        } label: {
+            Text(label)
+                .font(Theme.chipFont)
+                .foregroundStyle(Theme.secondary(scheme))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.primary.opacity(scheme == .dark ? 0.06 : 0.04))
+                )
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .pointer()
+        .accessibilityLabel("Filter by \(label)")
+    }
+
     private var rail: some View {
         AppRail(model: model)
             .frame(width: Theme.railWidth)
             .frame(maxHeight: .infinity)
             .background(.thinMaterial)
-            .gesture(WindowDragGesture())  // empty rail space drags the panel
+            .gesture(WindowDragGesture())
     }
 
     private var searchRow: some View {
@@ -79,7 +117,6 @@ public struct PanelView: View {
                     if model.query.isEmpty { SearchHints() } else { ghostCompletion }
                 }
                 .onKeyPress(.tab) { model.acceptCompletion() ? .handled : .ignored }
-                .onKeyPress(.rightArrow) { model.acceptCompletion() ? .handled : .ignored }
                 .onKeyPress(.downArrow) {
                     model.moveSelection(by: 1); return .handled
                 }
@@ -87,6 +124,10 @@ public struct PanelView: View {
                     model.moveSelection(by: -1); return .handled
                 }
                 .onKeyPress(.escape) {
+                    if !model.query.isEmpty {
+                        model.query = ""
+                        return .handled
+                    }
                     model.close()
                     return .handled
                 }
@@ -99,7 +140,7 @@ public struct PanelView: View {
                         return .ignored
                     }
                     if press.modifiers.contains(.shift) {
-                        model.toggleSelectedClipInPinboard(rank: n)  // ⌘⇧n: toggle on the nth pinboard
+                        model.toggleSelectedClipInPinboard(rank: n)
                     } else {
                         model.pasteRank(n)
                     }
@@ -115,14 +156,26 @@ public struct PanelView: View {
                     model.togglePinSelected()
                     return .handled
                 }
+
+            if !model.query.isEmpty {
+                Button {
+                    model.query = ""
+                    searchFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.secondary(scheme))
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+                .pointer()
+                .accessibilityLabel("Clear search")
+            }
         }
         .padding(.horizontal, 13)
         .frame(height: Theme.searchHeight)
     }
 
-    /// A click selects at once; a second click on the same row within the double-click interval
-    /// pastes. Done by hand because `onTapGesture(count: 2)` makes SwiftUI hold every single click
-    /// until the double-click window has passed, which read as lag.
     private func click(_ id: Int64) {
         let now = Date()
         if let last = lastClick, last.id == id, now.timeIntervalSince(last.at) < NSEvent.doubleClickInterval {
@@ -135,8 +188,6 @@ public struct PanelView: View {
         model.select(id)
     }
 
-    /// The completion drawn behind the field: the typed text invisibly (to take up its width), then
-    /// the suggested rest in secondary colour, so it reads as one line.
     @ViewBuilder private var ghostCompletion: some View {
         if let completion = model.completion {
             (Text(model.query).foregroundColor(.clear) + Text(completion).foregroundColor(Theme.secondary(scheme)))
@@ -157,6 +208,7 @@ public struct PanelView: View {
                     ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
                         ClipRow(
                             item: item,
+                            model: model,
                             isSelected: item.id == model.selectedId,
                             quickRank: model.commandHeld && index < 9 ? index + 1 : nil,
                             showLanguage: model.highlightCode
@@ -164,6 +216,7 @@ public struct PanelView: View {
                         .id(item.id)
                         .draggable(ClipDrag(item))
                         .onTapGesture { click(item.id) }
+                        .contextMenu { rowContextMenu(for: item) }
                         .pointer()
                     }
                 }
@@ -173,6 +226,23 @@ public struct PanelView: View {
                 if let new { proxy.scrollTo(new, anchor: .center) }
             }
         }
+    }
+
+    @ViewBuilder private func rowContextMenu(for item: ClipListItem) -> some View {
+        let verb = model.autoPasteActive ? "Paste" : "Copy"
+        Button(verb) { model.copyItem(item.id, plainText: false) }
+        Button("\(verb) as Plain Text") { model.copyItem(item.id, plainText: true) }
+        Divider()
+        Button(item.isPinned ? "Unpin" : "Pin") { model.togglePin(item.id) }
+        if !model.pinboards.isEmpty {
+            Menu("Add to Pinboard") {
+                ForEach(model.pinboards) { board in
+                    Button(board.name) { model.addClip(item.id, toPinboard: board.id) }
+                }
+            }
+        }
+        Divider()
+        Button("Delete", role: .destructive) { model.deleteItem(item.id) }
     }
 
     @ViewBuilder private var emptyState: some View {
@@ -204,5 +274,4 @@ public struct PanelView: View {
         .padding(.top, 60)
         .accessibilityElement(children: .combine)
     }
-
 }

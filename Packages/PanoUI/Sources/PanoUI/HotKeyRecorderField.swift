@@ -2,9 +2,6 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-/// A control that records a global-hotkey combination. Click it, press a shortcut with at least one
-/// modifier, and it reports the virtual key code, the Carbon modifier mask, and a display string.
-/// Escape cancels. Built in AppKit because SwiftUI does not surface raw key codes.
 public struct HotKeyRecorderField: NSViewRepresentable {
     private let display: String
     private let onRecorded: (UInt32, UInt32, String) -> Void
@@ -55,8 +52,14 @@ public struct HotKeyRecorderField: NSViewRepresentable {
 
         public override var acceptsFirstResponder: Bool { true }
 
-        /// `pointerStyle` is a SwiftUI modifier and cannot reach inside an `NSViewRepresentable`, so
-        /// this button asks AppKit for the hand cursor directly.
+        public override func resignFirstResponder() -> Bool {
+            if recording {
+                recording = false
+                title = display
+            }
+            return super.resignFirstResponder()
+        }
+
         public override func resetCursorRects() {
             addCursorRect(bounds, cursor: .pointingHand)
         }
@@ -71,7 +74,7 @@ public struct HotKeyRecorderField: NSViewRepresentable {
                 return
             }
             let carbon = Self.carbonModifiers(event.modifierFlags)
-            guard carbon != 0 else { return }  // require at least one modifier
+            guard carbon != 0 else { return }
             let text = Self.displayString(keyCode: event.keyCode, modifiers: event.modifierFlags, event: event)
             recording = false
             title = text
@@ -93,15 +96,56 @@ public struct HotKeyRecorderField: NSViewRepresentable {
             return result
         }
 
-        static func displayString(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, event: NSEvent) -> String {
+        public static func displayString(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, event: NSEvent) -> String {
+            displayString(
+                keyCode: keyCode, modifiers: modifiers, charactersIgnoringModifiers: event.charactersIgnoringModifiers)
+        }
+
+        static func displayString(
+            keyCode: UInt16, modifiers: NSEvent.ModifierFlags, charactersIgnoringModifiers: String?
+        ) -> String {
             var glyphs = ""
             if modifiers.contains(.control) { glyphs += "⌃" }
             if modifiers.contains(.option) { glyphs += "⌥" }
             if modifiers.contains(.shift) { glyphs += "⇧" }
             if modifiers.contains(.command) { glyphs += "⌘" }
-            let key = event.charactersIgnoringModifiers?.uppercased() ?? ""
-            let printable = key.first.map { $0.isLetter || $0.isNumber || $0.isPunctuation } ?? false
+            if let special = specialKeyName(keyCode) {
+                return glyphs + special
+            }
+            let key = charactersIgnoringModifiers?.uppercased() ?? ""
+            let printable = key.first.map { $0.isLetter || $0.isNumber || $0.isPunctuation || $0.isSymbol } ?? false
             return glyphs + (printable ? key : "key\(keyCode)")
+        }
+
+        private static func specialKeyName(_ keyCode: UInt16) -> String? {
+            switch Int(keyCode) {
+            case kVK_Space: return "Space"
+            case kVK_Return: return "↩"
+            case kVK_Tab: return "⇥"
+            case kVK_Delete: return "⌫"
+            case kVK_ForwardDelete: return "⌦"
+            case kVK_LeftArrow: return "←"
+            case kVK_RightArrow: return "→"
+            case kVK_UpArrow: return "↑"
+            case kVK_DownArrow: return "↓"
+            case kVK_Home: return "↖"
+            case kVK_End: return "↘"
+            case kVK_PageUp: return "⇞"
+            case kVK_PageDown: return "⇟"
+            case kVK_F1: return "F1"
+            case kVK_F2: return "F2"
+            case kVK_F3: return "F3"
+            case kVK_F4: return "F4"
+            case kVK_F5: return "F5"
+            case kVK_F6: return "F6"
+            case kVK_F7: return "F7"
+            case kVK_F8: return "F8"
+            case kVK_F9: return "F9"
+            case kVK_F10: return "F10"
+            case kVK_F11: return "F11"
+            case kVK_F12: return "F12"
+            default: return nil
+            }
         }
     }
 }

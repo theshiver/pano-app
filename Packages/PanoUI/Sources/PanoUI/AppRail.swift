@@ -2,9 +2,6 @@ import AppKit
 import PanoStore
 import SwiftUI
 
-/// The source-app rail (docs/05-design.md): "All" on top, then one icon per app clips came from,
-/// most recent first. Tapping filters the list to that app; the selected icon gets a window-coloured
-/// ring inside an accent ring. Keyboard: ⌘] / ⌘[ walk the rail, `app:` in the search does the same.
 struct AppRail: View {
     let model: PanelModel
     private var apps: [SourceApp] { model.apps }
@@ -26,7 +23,7 @@ struct AppRail: View {
                     railButton(label: app.name ?? app.bundleId, isSelected: selectedAppId == app.id) {
                         select(app.id)
                     } icon: {
-                        Image(nsImage: Self.icon(for: app.bundleId))
+                        Image(nsImage: PreviewCache.shared.appIcon(for: app.bundleId))
                             .resizable()
                             .frame(width: 30, height: 30)
                     }
@@ -45,24 +42,17 @@ struct AppRail: View {
             icon()
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(2)
-                .background(.background, in: RoundedRectangle(cornerRadius: 10))
-                .padding(2)
-                .background(isSelected ? Theme.accent : .clear, in: RoundedRectangle(cornerRadius: 12))
-                .opacity(isSelected || selectedAppId == nil ? 1 : 0.55)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(isSelected ? Theme.accent : .clear, lineWidth: 1.75)
+                )
+                .opacity(isSelected || selectedAppId == nil ? 1 : 0.72)
         }
         .buttonStyle(.plain)
-        .focusable(false)  // the search field owns keyboard focus; rail buttons must never take it
+        .focusable(false)
         .pointer()
         .help(label)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    // ponytail: NSWorkspace lookup per render; cache in a dictionary if the rail ever feels slow.
-    private static func icon(for bundleId: String) -> NSImage {
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
-            return NSWorkspace.shared.icon(forFile: url.path)
-        }
-        return NSWorkspace.shared.icon(for: .applicationBundle)
     }
 }

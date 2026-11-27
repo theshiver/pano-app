@@ -36,6 +36,19 @@ public final class Preferences {
     public var highlightCode: Bool { didSet { defaults.set(highlightCode, forKey: Key.highlightCode) } }
     public var renderMarkdown: Bool { didSet { defaults.set(renderMarkdown, forKey: Key.renderMarkdown) } }
     public var syntaxTheme: String { didSet { defaults.set(syntaxTheme, forKey: Key.syntaxTheme) } }
+    public var autoPaste: Bool { didSet { defaults.set(autoPaste, forKey: Key.autoPaste) } }
+    public var ocrTipDismissed: Bool { didSet { defaults.set(ocrTipDismissed, forKey: Key.ocrTipDismissed) } }
+    public var transformTipDismissed: Bool {
+        didSet { defaults.set(transformTipDismissed, forKey: Key.transformTipDismissed) }
+    }
+    public var panelWidth: Double { didSet { defaults.set(panelWidth, forKey: Key.panelWidth) } }
+    public var panelHeight: Double { didSet { defaults.set(panelHeight, forKey: Key.panelHeight) } }
+    public var firstLaunchDate: Date { didSet { defaults.set(firstLaunchDate, forKey: Key.firstLaunchDate) } }
+    public var totalPastes: Int { didSet { defaults.set(totalPastes, forKey: Key.totalPastes) } }
+    public var usedPowerFeature: Bool { didSet { defaults.set(usedPowerFeature, forKey: Key.usedPowerFeature) } }
+    public var lastReviewPromptVersion: String? {
+        didSet { defaults.set(lastReviewPromptVersion, forKey: Key.lastReviewPromptVersion) }
+    }
 
     /// Global hotkey: a virtual key code and Carbon modifier mask, plus a display string like "⌘⇧V".
     public var hotKeyCode: UInt32 { didSet { defaults.set(Int(hotKeyCode), forKey: Key.hotKeyCode) } }
@@ -57,6 +70,21 @@ public final class Preferences {
         highlightCode = defaults.object(forKey: Key.highlightCode) as? Bool ?? true
         renderMarkdown = defaults.object(forKey: Key.renderMarkdown) as? Bool ?? true
         syntaxTheme = defaults.string(forKey: Key.syntaxTheme) ?? "atom-one-dark"
+        autoPaste = defaults.object(forKey: Key.autoPaste) as? Bool ?? true
+        ocrTipDismissed = defaults.bool(forKey: Key.ocrTipDismissed)
+        transformTipDismissed = defaults.bool(forKey: Key.transformTipDismissed)
+        panelWidth = defaults.object(forKey: Key.panelWidth) as? Double ?? Double(Theme.windowWidth)
+        panelHeight = defaults.object(forKey: Key.panelHeight) as? Double ?? Double(Theme.windowHeight)
+        if let savedFirstLaunch = defaults.object(forKey: Key.firstLaunchDate) as? Date {
+            firstLaunchDate = savedFirstLaunch
+        } else {
+            let now = Date()
+            firstLaunchDate = now
+            defaults.set(now, forKey: Key.firstLaunchDate)
+        }
+        totalPastes = defaults.integer(forKey: Key.totalPastes)
+        usedPowerFeature = defaults.bool(forKey: Key.usedPowerFeature)
+        lastReviewPromptVersion = defaults.string(forKey: Key.lastReviewPromptVersion)
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)
         hotKeyModifiers = UInt32(defaults.object(forKey: Key.hotKeyModifiers) as? Int ?? (cmdKey | shiftKey))
         hotKeyDisplay = defaults.string(forKey: Key.hotKeyDisplay) ?? "⌘⇧V"
@@ -99,6 +127,15 @@ public final class Preferences {
         static let renderMarkdown = "renderMarkdown"
         static let highlightCode = "highlightCode"
         static let syntaxTheme = "syntaxTheme"
+        static let autoPaste = "autoPaste"
+        static let ocrTipDismissed = "ocrTipDismissed"
+        static let transformTipDismissed = "transformTipDismissed"
+        static let panelWidth = "panelWidth"
+        static let panelHeight = "panelHeight"
+        static let firstLaunchDate = "firstLaunchDate"
+        static let totalPastes = "totalPastes"
+        static let usedPowerFeature = "usedPowerFeature"
+        static let lastReviewPromptVersion = "lastReviewPromptVersion"
         static let hotKeyCode = "hotKeyCode"
         static let hotKeyModifiers = "hotKeyModifiers"
         static let hotKeyDisplay = "hotKeyDisplay"
