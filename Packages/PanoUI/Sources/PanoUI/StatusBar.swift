@@ -5,6 +5,9 @@ struct StatusBar: View {
     let total: Int
     let bytes: Int64
     let filtered: Bool
+    let updateVersion: String?
+    let openUpdates: () -> Void
+    let dismissUpdate: () -> Void
     let openSettings: () -> Void
     @Environment(\.colorScheme) private var scheme
 
@@ -16,6 +19,31 @@ struct StatusBar: View {
                 Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
             }
             .accessibilityElement(children: .combine)
+
+            if let updateVersion {
+                Button(action: openUpdates) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 10))
+                        Text("v\(updateVersion)")
+                    }
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(Theme.accent.opacity(scheme == .dark ? 0.18 : 0.12))
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+                .pointer()
+                .help("Pano v\(updateVersion) is available — click to update")
+                .accessibilityLabel("Update available, version \(updateVersion)")
+                .contextMenu {
+                    Button("Dismiss for v\(updateVersion)", action: dismissUpdate)
+                }
+            }
 
             Button(action: openSettings) {
                 Image(systemName: "gearshape")

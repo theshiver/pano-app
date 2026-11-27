@@ -5,6 +5,8 @@ import SwiftUI
 public struct SettingsView: View {
     @Bindable private var prefs: Preferences
     private let exclusion: ExclusionModel
+    private let navigation: SettingsNavigation
+    private let update: UpdateModel?
     private let supportsAutoPaste: Bool
     private let isAccessibilityTrusted: () -> Bool
     private let onOpenAccessibilitySettings: () -> Void
@@ -22,35 +24,15 @@ public struct SettingsView: View {
     private let isCapturePaused: () -> Bool
     private let onToggleCapturePaused: (Bool) -> Void
 
-    @State private var selectedTab: Tab = .general
-    @State private var hoveredTab: Tab?
+    @State private var hoveredTab: SettingsTab?
     @State private var capturePaused = false
     @State private var accessibilityGranted = false
-
-    private enum Tab: String, CaseIterable, Identifiable {
-        case general, history, privacy, about
-        var id: String { rawValue }
-        var label: String {
-            switch self {
-            case .general: return "General"
-            case .history: return "History"
-            case .privacy: return "Privacy"
-            case .about: return "About"
-            }
-        }
-        var symbol: String {
-            switch self {
-            case .general: return "gearshape"
-            case .history: return "clock.arrow.circlepath"
-            case .privacy: return "hand.raised"
-            case .about: return "info.circle"
-            }
-        }
-    }
 
     public init(
         prefs: Preferences,
         exclusion: ExclusionModel,
+        navigation: SettingsNavigation = SettingsNavigation(),
+        update: UpdateModel? = nil,
         supportsAutoPaste: Bool = false,
         isAccessibilityTrusted: @escaping () -> Bool = { false },
         onOpenAccessibilitySettings: @escaping () -> Void = {},
@@ -70,6 +52,8 @@ public struct SettingsView: View {
     ) {
         self.prefs = prefs
         self.exclusion = exclusion
+        self.navigation = navigation
+        self.update = update
         self.supportsAutoPaste = supportsAutoPaste
         self.isAccessibilityTrusted = isAccessibilityTrusted
         self.onOpenAccessibilitySettings = onOpenAccessibilitySettings
@@ -93,7 +77,7 @@ public struct SettingsView: View {
             tabBar
             Divider()
             Group {
-                switch selectedTab {
+                switch navigation.selectedTab {
                 case .general: general
                 case .history: history
                 case .privacy: privacy
@@ -114,16 +98,24 @@ public struct SettingsView: View {
 
     private var tabBar: some View {
         HStack(spacing: 6) {
-            ForEach(Tab.allCases) { tab in
-                let active = selectedTab == tab
+            ForEach(SettingsTab.allCases) { tab in
+                let active = navigation.selectedTab == tab
                 let hovered = hoveredTab == tab
                 Button {
-                    selectedTab = tab
+                    navigation.selectedTab = tab
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: tab.symbol)
                             .font(.system(size: 16, weight: active ? .semibold : .regular))
                             .foregroundStyle(active ? Theme.accent : Color.primary.opacity(0.68))
+                            .overlay(alignment: .topTrailing) {
+                                if tab == .about, update?.availableRelease != nil {
+                                    Circle()
+                                        .fill(Theme.accent)
+                                        .frame(width: 6, height: 6)
+                                        .offset(x: 4, y: -2)
+                                }
+                            }
                         Text(tab.label)
                             .font(.system(size: 11, weight: active ? .semibold : .medium))
                             .foregroundStyle(active ? Color.primary : Color.primary.opacity(0.68))
@@ -384,11 +376,134 @@ public struct SettingsView: View {
                     Link("pano-app.com", destination: Self.websiteURL).pointer()
                 }
             }
+            if let update {
+                updatesSection(update)
+            }
             Section {
-                note("Everything stays on this Mac. No account, no sync, no telemetry, no network access at all.")
+                if update != nil {
+                    note(
+                        "Your clipboard data never leaves this Mac. No account, no sync, no telemetry. Only optional update checks contact GitHub."
+                    )
+                } else {
+                    note("Everything stays on this Mac. No account, no sync, no telemetry, no network access at all.")
+                }
             }
         }
         .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private func updatesSection(_ update: UpdateModel) -> some View {
+        Section("Updates") {
+            switch update.status {
+            case .idle:
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Current version: \(Preferences.marketingVersion)")
+                        if let checkedAt = update.lastCheckedAt {
+                            note("Last checked \(checkedAt.formatted(date: .abbreviated, time: .shortened))")
+                        }
+                    }
+                    Spacer()
+                    Button("Check for Updates") { update.checkNow() }
+                        .pointer()
+                }
+            case .checking:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Checking for updates…")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Check for Updates") {}
+                        .disabled(true)
+                }
+            case .upToDate(let checkedAt):
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pano \(Preferences.marketingVersion) is up to date")
+                        note("Last checked \(checkedAt.formatted(date: .abbreviated, time: .shortened))")
+                    }
+                    Spacer()
+                    Button("Check for Updates") { update.checkNow() }
+                        .pointer()
+                }
+            case .available(let release):
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                        Text("Pano \(release.version) is available")
+                            .fontWeight(.semibold)
+                    }
+                    if !release.notes.isEmpty {
+                        Text(release.notes)
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color.primary.opacity(0.05))
+                            )
+                    }
+                    HStack(spacing: 10) {
+                        Button(release.downloadURL != nil ? "Install & Relaunch" : "Download Update") {
+                            update.installAvailable()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .pointer()
+                        Link("Release notes", destination: release.releasePageURL)
+                            .font(.system(size: 12))
+                            .pointer()
+                    }
+                }
+                .padding(.vertical, 2)
+            case .downloading(let release, let progress):
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Downloading Pano \(release.version)…")
+                    if let progress {
+                        ProgressView(value: progress)
+                    } else {
+                        ProgressView()
+                    }
+                }
+            case .installing(let release):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Verifying and installing Pano \(release.version)…")
+                        .foregroundStyle(.secondary)
+                }
+            case .openedInstaller(let release, let message):
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(message)
+                        .font(.system(size: 12))
+                    Link("Release notes", destination: release.releasePageURL)
+                        .font(.system(size: 12))
+                        .pointer()
+                }
+            case .failed(let message, let fallbackURL):
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange)
+                    HStack(spacing: 10) {
+                        Button("Try Again") { update.checkNow() }
+                            .pointer()
+                        if let fallbackURL {
+                            Link("Open Releases", destination: fallbackURL)
+                                .font(.system(size: 12))
+                                .pointer()
+                        }
+                    }
+                }
+            }
+
+            Toggle(
+                "Check for updates automatically",
+                isOn: toggle(\.automaticallyChecksForUpdates, { update.setAutomaticChecks($0) })
+            )
+        }
     }
 
     private static let websiteURL = URL(string: "https://pano-app.com") ?? URL(fileURLWithPath: "/")

@@ -6,7 +6,7 @@
 
 ### Clipboard history for Mac, built for the way you work.
 
-A free, open-source, strictly local clipboard manager for macOS. Unlimited SQLite FTS5 history, live JSON/JWT/Base64/Tailwind transforms, and on-device screenshot OCR, with zero subscriptions and zero network calls.
+A free, open-source, strictly local clipboard manager for macOS. Unlimited SQLite FTS5 history, live JSON/JWT/Base64/Tailwind transforms, and on-device screenshot OCR, with zero subscriptions and zero clipboard network calls.
 
 **[Download DMG (Auto-Paste)](https://github.com/theshiver/pano-app/releases/latest)** · [Mac App Store (Sandboxed)](https://apps.apple.com/app/id6812981549) · [Website](https://pano-app.com) · [☕ Buy me a coffee](https://buymeacoffee.com/cancetin) · [Changelog](CHANGELOG.md)
 
@@ -32,7 +32,7 @@ Choose the free build that fits your workflow:
 
 | Build | How to install | Paste behaviour |
 |---|---|---|
-| **Direct DMG / Homebrew** (`PanoDirect`) | Download `Pano-1.1.dmg` from [GitHub Releases](https://github.com/theshiver/pano-app/releases/latest) or run `brew install --cask theshiver/tap/pano` | Includes optional Auto-Paste (`Return` presses `⌘V` once Accessibility is granted). See the [Auto-Paste setup guide](https://pano-app.com/auto-paste-setup/). |
+| **Direct DMG / Homebrew** (`PanoDirect`) | Download `Pano-1.1.1.dmg` from [GitHub Releases](https://github.com/theshiver/pano-app/releases/latest) or run `brew install --cask theshiver/tap/pano` | Includes optional Auto-Paste (`Return` presses `⌘V` once Accessibility is granted) and optional in-app GitHub Releases update checks. See the [Auto-Paste setup guide](https://pano-app.com/auto-paste-setup/). |
 | **Mac App Store** (`Pano`) | Install from the [Mac App Store](https://apps.apple.com/app/id6812981549) | Strictly sandboxed, copy-only (`Return` puts the clip on your clipboard, you press `⌘V`), with zero Accessibility or synthetic-event APIs. |
 
 ## Features
@@ -102,7 +102,7 @@ Choose the free build that fits your workflow:
 |---|---|---|---|---|
 | Price | **Free forever** | $29.99 / year | Free (DMG) / $9.99 MAS | Included |
 | License | **MIT Open Source** | Closed | MIT Open Source | Closed |
-| Network & Cloud | **Zero network access** | iCloud sync | Zero network access | Apple system |
+| Network & Cloud | **Zero cloud / sync (MAS: zero network)** | iCloud sync | Zero network access | Apple system |
 | History Retention | **Unlimited SQLite FTS5** | Unlimited (synced) | Configurable list | 8 hours default |
 | Live Transforms (JSON, JWT, B64, Colour) | **Built in (live)** | No | No | No |
 | On-Device Screenshot OCR | **Yes (Apple Vision)** | No | No | Basic |
@@ -120,7 +120,7 @@ Inspect the installed app's entitlements yourself:
 codesign -d --entitlements :- /Applications/Pano.app
 ```
 
-Neither build includes a network entitlement: `Pano` ships with only `app-sandbox` and `files.user-selected.read-only`, and `PanoDirect` ships with `app-sandbox: false` and zero network entitlements.
+Neither build sends clipboard data or telemetry anywhere: `Pano` (Mac App Store) ships with only `app-sandbox` and `files.user-selected.read-only` and contains zero network code. `PanoDirect` (DMG / Homebrew) ships with `app-sandbox: false` and only connects to GitHub Releases when checking for or installing app updates (toggleable in Settings).
 
 Permissions requested by macOS (all revocable):
 

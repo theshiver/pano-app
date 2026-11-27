@@ -39,6 +39,13 @@ public struct PanelView: View {
                 shown: model.items.count, total: model.totalCount, bytes: model.storageBytes,
                 filtered: model.selectedAppId != nil || model.selectedPinboardId != nil
                     || !model.query.trimmingCharacters(in: .whitespaces).isEmpty,
+                updateVersion: model.update?.badgeVersion,
+                openUpdates: model.openUpdates,
+                dismissUpdate: {
+                    if let version = model.update?.badgeVersion {
+                        model.update?.dismissBadge(for: version)
+                    }
+                },
                 openSettings: model.openSettings)
         }
         .frame(minWidth: Theme.minWindowWidth, minHeight: Theme.minWindowHeight)

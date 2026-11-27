@@ -14,6 +14,7 @@
 		4FC63B10B3333A660384FDEF /* StarterSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0F1FCBD5089988341C7079 /* StarterSeed.swift */; };
 		64AE79A5DE492601C33E84D7 /* GlobalHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270C2DEAC2E2FAF5ECBC43BE /* GlobalHotKey.swift */; };
 		79300C362BFA1D525B0CDE30 /* OnboardingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */; };
+		A0B4542367938D92CD49F5E9 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B12E5250E96438C9FAF9A22 /* UpdateService.swift */; };
 		A6FB8047E604EDBCAC3E859E /* AutoPasteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBF72A1FDF51989AF1F90FB /* AutoPasteService.swift */; };
 		AA2D52B35E60623C8C1D24B9 /* PanoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8992C5DECD288DF58410A7C3 /* PanoUI */; };
 		BDAFC0B4C1A158B9AEBEC12C /* PasteHintController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */; };
@@ -39,6 +40,7 @@
 		6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
 		6A218AC9DEFFD58C4B5CE29A /* PanoUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PanoUI; path = Packages/PanoUI; sourceTree = SOURCE_ROOT; };
 		707D3D9A586C284DAA7F2E30 /* OnboardingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingController.swift; sourceTree = "<group>"; };
+		9B12E5250E96438C9FAF9A22 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 		AF22A45DD1021A67EE7E2992 /* Pano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pano.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B94400302E890E027583C578 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C9F36AE05A7FC5F0C8652CA1 /* PasteHintController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHintController.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				E539C75FB2DAFB03915621E8 /* ReviewPrompt.swift */,
 				6719E02E5C5FD69BDE43AB3B /* SettingsController.swift */,
 				1C0F1FCBD5089988341C7079 /* StarterSeed.swift */,
+				9B12E5250E96438C9FAF9A22 /* UpdateService.swift */,
 			);
 			path = Pano;
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 				23B282D55B2A4C79C5D5282C /* ReviewPrompt.swift in Sources */,
 				DD5C20F4F455D9EDD71BBCFC /* SettingsController.swift in Sources */,
 				4FC63B10B3333A660384FDEF /* StarterSeed.swift in Sources */,
+				A0B4542367938D92CD49F5E9 /* UpdateService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -279,7 +283,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
@@ -360,7 +364,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
@@ -448,7 +452,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;
@@ -536,7 +540,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cancetin.pano;
 				PRODUCT_NAME = Pano;
 				SDKROOT = macosx;

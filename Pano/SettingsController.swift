@@ -24,12 +24,15 @@ final class SettingsController {
     private let onClearAllHistory: () -> Void
     private let isCapturePaused: () -> Bool
     private let onToggleCapturePaused: (Bool) -> Void
+    private let update: UpdateModel?
+    private let navigation = SettingsNavigation()
     private var window: NSWindow?
     private var exclusion: ExclusionModel?
 
     init(
         prefs: Preferences,
         store: Store,
+        update: UpdateModel? = nil,
         supportsAutoPaste: Bool,
         isAccessibilityTrusted: @escaping () -> Bool,
         onOpenAccessibilitySettings: @escaping () -> Void,
@@ -65,9 +68,13 @@ final class SettingsController {
         self.onClearAllHistory = onClearAllHistory
         self.isCapturePaused = isCapturePaused
         self.onToggleCapturePaused = onToggleCapturePaused
+        self.update = update
     }
 
-    func show() {
+    func show(tab: SettingsTab? = nil) {
+        if let tab {
+            navigation.selectedTab = tab
+        }
         if let window {
             refreshExclusions()
             activateWindow(window)
@@ -91,6 +98,8 @@ final class SettingsController {
             rootView: SettingsView(
                 prefs: prefs,
                 exclusion: exclusion,
+                navigation: navigation,
+                update: update,
                 supportsAutoPaste: supportsAutoPaste,
                 isAccessibilityTrusted: isAccessibilityTrusted,
                 onOpenAccessibilitySettings: onOpenAccessibilitySettings,

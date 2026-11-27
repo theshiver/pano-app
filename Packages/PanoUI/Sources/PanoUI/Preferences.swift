@@ -49,6 +49,21 @@ public final class Preferences {
     public var lastReviewPromptVersion: String? {
         didSet { defaults.set(lastReviewPromptVersion, forKey: Key.lastReviewPromptVersion) }
     }
+    public var automaticallyChecksForUpdates: Bool {
+        didSet { defaults.set(automaticallyChecksForUpdates, forKey: Key.automaticallyChecksForUpdates) }
+    }
+    public var lastUpdateCheckDate: Date? {
+        didSet { defaults.set(lastUpdateCheckDate, forKey: Key.lastUpdateCheckDate) }
+    }
+    public var dismissedUpdateVersion: String? {
+        didSet { defaults.set(dismissedUpdateVersion, forKey: Key.dismissedUpdateVersion) }
+    }
+    public var updateCheckETag: String? {
+        didSet { defaults.set(updateCheckETag, forKey: Key.updateCheckETag) }
+    }
+    public var cachedReleaseData: Data? {
+        didSet { defaults.set(cachedReleaseData, forKey: Key.cachedReleaseData) }
+    }
 
     /// Global hotkey: a virtual key code and Carbon modifier mask, plus a display string like "⌘⇧V".
     public var hotKeyCode: UInt32 { didSet { defaults.set(Int(hotKeyCode), forKey: Key.hotKeyCode) } }
@@ -85,6 +100,11 @@ public final class Preferences {
         totalPastes = defaults.integer(forKey: Key.totalPastes)
         usedPowerFeature = defaults.bool(forKey: Key.usedPowerFeature)
         lastReviewPromptVersion = defaults.string(forKey: Key.lastReviewPromptVersion)
+        automaticallyChecksForUpdates = defaults.object(forKey: Key.automaticallyChecksForUpdates) as? Bool ?? true
+        lastUpdateCheckDate = defaults.object(forKey: Key.lastUpdateCheckDate) as? Date
+        dismissedUpdateVersion = defaults.string(forKey: Key.dismissedUpdateVersion)
+        updateCheckETag = defaults.string(forKey: Key.updateCheckETag)
+        cachedReleaseData = defaults.data(forKey: Key.cachedReleaseData)
         hotKeyCode = UInt32(defaults.object(forKey: Key.hotKeyCode) as? Int ?? kVK_ANSI_V)
         hotKeyModifiers = UInt32(defaults.object(forKey: Key.hotKeyModifiers) as? Int ?? (cmdKey | shiftKey))
         hotKeyDisplay = defaults.string(forKey: Key.hotKeyDisplay) ?? "⌘⇧V"
@@ -136,6 +156,11 @@ public final class Preferences {
         static let totalPastes = "totalPastes"
         static let usedPowerFeature = "usedPowerFeature"
         static let lastReviewPromptVersion = "lastReviewPromptVersion"
+        static let automaticallyChecksForUpdates = "automaticallyChecksForUpdates"
+        static let lastUpdateCheckDate = "lastUpdateCheckDate"
+        static let dismissedUpdateVersion = "dismissedUpdateVersion"
+        static let updateCheckETag = "updateCheckETag"
+        static let cachedReleaseData = "cachedReleaseData"
         static let hotKeyCode = "hotKeyCode"
         static let hotKeyModifiers = "hotKeyModifiers"
         static let hotKeyDisplay = "hotKeyDisplay"

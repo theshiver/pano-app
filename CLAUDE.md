@@ -20,9 +20,12 @@ them, and push back if asked to slip one in mid-task.
 **Never in this codebase:**
 - iOS, iPadOS, visionOS. macOS only.
 - iCloud, CloudKit, any sync, any server, any account system.
-- Any outbound network request. The app ships with **no** network entitlement.
-  This is a product promise, not an implementation detail. That includes
-  "just fetching the page title for a copied URL" — explicitly rejected.
+- Any outbound network request for clipboard data, telemetry, or analytics. The Mac App
+  Store target (`Pano`) ships with **no** network entitlement and zero network code.
+  The direct distribution target (`PanoDirect`) only makes optional update checks
+  (and downloads verified DMG updates when requested) against GitHub Releases,
+  strictly isolated behind `#if DIRECT_DISTRIBUTION` in `Pano/UpdateService.swift`.
+  "Fetching the page title for a copied URL" remains explicitly rejected.
 - Telemetry, crash reporting SaaS, analytics.
 - Team/sharing features.
 - A text expander.

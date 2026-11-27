@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isPaused = false
 
     #if DIRECT_DISTRIBUTION
+        private var updateService: UpdateService?
         private let supportsAutoPaste = true
     #else
         private let supportsAutoPaste = false
@@ -93,10 +94,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             openSettings: { [weak self] in
                 Task { @MainActor in self?.openSettings() }
+            },
+            openUpdates: { [weak self] in
+                Task { @MainActor in self?.openUpdates() }
             }
         )
+        #if DIRECT_DISTRIBUTION
+            let updateService = UpdateService(prefs: prefs) { [weak self] in
+                self?.refreshStatusItem()
+            }
+            self.updateService = updateService
+            let currentUpdateModel: UpdateModel? = updateService.model
+        #else
+            let currentUpdateModel: UpdateModel? = nil
+        #endif
+
         let model = PanelModel(store: store, actions: actions)
         model.prefs = prefs
+        model.update = currentUpdateModel
         model.supportsAutoPaste = supportsAutoPaste
         model.searchDebounce = .milliseconds(35)
         #if DIRECT_DISTRIBUTION
@@ -139,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings = SettingsController(
             prefs: prefs,
             store: store,
+            update: currentUpdateModel,
             supportsAutoPaste: supportsAutoPaste,
             isAccessibilityTrusted: isTrusted,
             onOpenAccessibilitySettings: openAccessibility,
@@ -165,6 +181,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             isCapturePaused: { [weak self] in self?.isPaused ?? false },
             onToggleCapturePaused: { [weak self] paused in self?.setCapturePaused(paused) }
         )
+
+        #if DIRECT_DISTRIBUTION
+            updateService.startIfEnabled()
+        #endif
     }
 
     private func deliverPaste(payload: [(uti: String, data: Data)], prefs: Preferences, hint: PasteHintController) async
@@ -259,6 +279,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clearRoot.submenu = clearMenu
         menu.addItem(clearRoot)
 
+        #if DIRECT_DISTRIBUTION
+            let updateTitle: String
+            if let release = updateService?.model.availableRelease {
+                updateTitle = String(localized: "Update Available (v\(release.version))…")
+            } else {
+                updateTitle = String(localized: "Check for Updates…")
+            }
+            menu.addItem(withTitle: updateTitle, action: #selector(checkForUpdates), keyEquivalent: "")
+                .target = self
+        #endif
+
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
             .target = self
 
@@ -320,6 +351,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openSettings() {
         settings?.show()
     }
+
+    private func openUpdates() {
+        settings?.show(tab: .about)
+    }
+
+    #if DIRECT_DISTRIBUTION
+        @objc private func checkForUpdates() {
+            settings?.show(tab: .about)
+            if updateService?.model.availableRelease == nil, updateService?.model.isBusy == false {
+                updateService?.check(userInitiated: true)
+            }
+        }
+    #endif
 
     @objc private func togglePause() {
         setCapturePaused(!isPaused)

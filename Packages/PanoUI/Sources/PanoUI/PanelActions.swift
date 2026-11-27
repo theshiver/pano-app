@@ -12,16 +12,19 @@ public struct PanelActions: Sendable {
     public var close: @Sendable () -> Void
     /// Opens the Settings window (the panel's ⚙︎; the only route when the menu-bar icon is hidden).
     public var openSettings: @Sendable () -> Void
+    public var openUpdates: @Sendable () -> Void
 
     public init(
         paste: @escaping @Sendable (_ id: Int64, _ plainText: Bool) -> Void,
         pasteText: @escaping @Sendable (_ text: String, _ html: String?) -> Void,
         close: @escaping @Sendable () -> Void,
-        openSettings: @escaping @Sendable () -> Void = {}
+        openSettings: @escaping @Sendable () -> Void = {},
+        openUpdates: @escaping @Sendable () -> Void = {}
     ) {
         self.paste = paste
         self.pasteText = pasteText
         self.close = close
         self.openSettings = openSettings
+        self.openUpdates = openUpdates
     }
 }

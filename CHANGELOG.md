@@ -6,6 +6,17 @@ All notable changes to Pano are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-27
+
+### Added
+
+- In-app update checks and verified DMG installation for the direct distribution
+  build (`PanoDirect`): automatic 24-hour GitHub Releases checks (toggleable in
+  Settings), manual `Check for Updates…` in the menu bar, subtle status bar
+  update pill in the panel, and an Updates section in `Settings → About` with
+  Developer ID / Team ID verification and atomic relaunch. The Mac App Store
+  build (`Pano`) remains strictly sandboxed with zero network code.
+
 ## [1.1] - 2026-11-27
 
 ### Added

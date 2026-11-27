@@ -44,6 +44,7 @@ public final class PanelModel {
     public private(set) var transformOutput: TransformOutput?
 
     public var prefs: Preferences?
+    public var update: UpdateModel?
     public var highlightCode: Bool {
         get { prefs?.highlightCode ?? true }
         set { prefs?.highlightCode = newValue }
@@ -420,5 +421,10 @@ public final class PanelModel {
     public func openSettings() {
         actions.close()
         actions.openSettings()
+    }
+
+    public func openUpdates() {
+        actions.close()
+        actions.openUpdates()
     }
 }
